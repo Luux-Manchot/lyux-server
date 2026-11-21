@@ -1,0 +1,22 @@
+# ==============================================================================
+# Modèle d'exports NFS pour Serveur Central LyuX (Opération Manchot)
+# Emplacement cible : projects/lyux-server-infra/configs/samba/exports.template
+# Déployé sous : /etc/exports.d/lyux.exports
+# ==============================================================================
+
+# Partage des dossiers personnels utilisateurs
+# Accès complet pour chaque utilisateur (sécurisé par les droits POSIX 700)
+/srv/samba/homes          192.168.100.0/24(rw,sync,no_subtree_check,root_squash)
+
+# Partages de cours et de classes
+# Distribution (lecture seule élèves) et Dépôt (écriture seule / drop-box avec sticky bit)
+/srv/samba/classes        192.168.100.0/24(rw,sync,no_subtree_check,root_squash)
+
+# Espace d'échange Enseignants (réservé aux professeurs)
+/srv/samba/profs          192.168.100.0/24(rw,sync,no_subtree_check,root_squash)
+
+# Espace Administration et Vie Scolaire
+/srv/samba/administration 192.168.100.0/24(rw,sync,no_subtree_check,root_squash)
+
+# Espace Public Commun (lecture seule générale pour tous les membres de l'établissement)
+/srv/samba/commun         192.168.100.0/24(ro,sync,no_subtree_check,all_squash)

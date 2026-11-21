@@ -1,0 +1,83 @@
+# ==============================================================================
+# Arborescence DIT (Directory Information Tree) Standard LyuX (Opération Manchot)
+# Emplacement cible : projects/lyux-server-infra/configs/samba/init-dit.ldif
+# Application : ldbmodify -H /var/lib/samba/private/sam.ldb init-dit.ldif
+# ou via samba-tool / ldapadd
+# ==============================================================================
+
+# 1. Unité Organisationnelle Principale des Utilisateurs
+dn: ou=utilisateurs,dc=lyux,dc=lan
+changetype: add
+objectClass: top
+objectClass: organizationalUnit
+ou: utilisateurs
+description: Branche principale des utilisateurs de l'etablissement
+
+# 2. Branche Élèves (sous utilisateurs)
+dn: ou=eleves,ou=utilisateurs,dc=lyux,dc=lan
+changetype: add
+objectClass: top
+objectClass: organizationalUnit
+ou: eleves
+description: Comptes eleves repartis par niveau et classe
+
+# 3. Branche Enseignants (sous utilisateurs)
+dn: ou=enseignants,ou=utilisateurs,dc=lyux,dc=lan
+changetype: add
+objectClass: top
+objectClass: organizationalUnit
+ou: enseignants
+description: Comptes du corps enseignant et professeurs principaux
+
+# 4. Branche Vie Scolaire (sous utilisateurs)
+dn: ou=viesco,ou=utilisateurs,dc=lyux,dc=lan
+changetype: add
+objectClass: top
+objectClass: organizationalUnit
+ou: viesco
+description: Comptes du service Vie Scolaire et CPE
+
+# 5. Branche Direction (sous utilisateurs)
+dn: ou=direction,ou=utilisateurs,dc=lyux,dc=lan
+changetype: add
+objectClass: top
+objectClass: organizationalUnit
+ou: direction
+description: Direction, proviseur, adjoints et gestion comptable
+
+# 6. Branche Groupes Globaux et Pédagogiques
+dn: ou=groupes,dc=lyux,dc=lan
+changetype: add
+objectClass: top
+objectClass: organizationalUnit
+ou: groupes
+description: Groupes de securite et regroupements pedagogiques
+
+# 7. Unités Organisationnelles de Premier Niveau (compatibilité transversale)
+dn: ou=eleves,dc=lyux,dc=lan
+changetype: add
+objectClass: top
+objectClass: organizationalUnit
+ou: eleves
+description: Alias racine pour clients LDAP externes (SSSD / Salles)
+
+dn: ou=enseignants,dc=lyux,dc=lan
+changetype: add
+objectClass: top
+objectClass: organizationalUnit
+ou: enseignants
+description: Alias racine pour corps professoral
+
+dn: ou=viesco,dc=lyux,dc=lan
+changetype: add
+objectClass: top
+objectClass: organizationalUnit
+ou: viesco
+description: Alias racine pour Vie Scolaire
+
+dn: ou=direction,dc=lyux,dc=lan
+changetype: add
+objectClass: top
+objectClass: organizationalUnit
+ou: direction
+description: Alias racine pour Direction

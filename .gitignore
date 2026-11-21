@@ -1,0 +1,13 @@
+# Python & Testing
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.log
+
+# Environments & Local Data
+.env
+.venv
+env/
+venv/
+data/uptime-kuma/*.db

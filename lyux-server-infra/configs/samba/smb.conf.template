@@ -1,0 +1,97 @@
+# ==============================================================================
+# Modèle de configuration Samba pour serveur central LyuX (Opération Manchot)
+# Emplacement cible sur le serveur : /etc/samba/smb.conf
+# Source projet : projects/lyux-server-infra/configs/samba/smb.conf.template
+# ==============================================================================
+
+[global]
+   workgroup = LYUX
+   realm = LYUX.LAN
+   netbios name = SERVEUR-LYUX
+   security = USER
+   server role = standalone server
+   passdb backend = tdbsam
+
+   # --- Encodage et performances ---
+   unix charset = UTF-8
+   dos charset = CP850
+   dns proxy = no
+   socket options = TCP_NODELAY IPTOS_LOWDELAY SO_RCVBUF=131072 SO_SNDBUF=131072
+
+   # --- Sécurité & Négociation de protocole ---
+   server min protocol = SMB2_10
+   client min protocol = SMB2_10
+   ntlm auth = yes
+   map to guest = bad user
+   load printers = no
+   printing = bsd
+   printcap name = /dev/null
+
+   # --- Logs ---
+   log file = /var/log/samba/log.%m
+   max log size = 1000
+   logging = file
+   panic action = /usr/share/samba/panic-action %d
+
+   # --- Prise en charge des ACLs POSIX et Quotas disques (Features 8 & 9) ---
+   vfs objects = acl_xattr
+   map acl inherit = yes
+   inherit acls = yes
+   quotas = yes
+
+# ==============================================================================
+# PARTAGES UTILISATEURS & CLASSES
+# ==============================================================================
+
+# Dossier personnel de chaque utilisateur (monté automatiquement sous ~/Espace_Personnel)
+[homes]
+   comment = Dossier Personnel LyuX
+   path = /srv/samba/homes/%S
+   browseable = no
+   read only = no
+   create mask = 0700
+   directory mask = 0700
+   valid users = %S
+   root preexec = /usr/local/bin/lyux-create-user-home.sh %U %G
+
+# Dossiers partagés de distribution et dépôt pour les cours
+[classes]
+   comment = Espaces Partagés de Classes
+   path = /srv/samba/classes
+   browseable = yes
+   read only = no
+   create mask = 0770
+   directory mask = 0770
+   inherit acls = yes
+   # Note : Les permissions fines (Distribution RO pour élèves / Dépôt -WX avec sticky bit)
+   # sont arbitrées par les ACLs POSIX sous-jacentes définies dans setup-shares.sh.
+
+# Espace réservé aux enseignants
+[profs]
+   comment = Espace d'échange Enseignants
+   path = /srv/samba/profs
+   browseable = yes
+   read only = no
+   create mask = 0770
+   directory mask = 0770
+   valid users = @enseignants, @techniciens
+   force group = enseignants
+
+# Espace d'échange Vie Scolaire / Administration
+[administration]
+   comment = Espace Administration et Vie Scolaire
+   path = /srv/samba/administration
+   browseable = no
+   read only = no
+   create mask = 0770
+   directory mask = 0770
+   valid users = @administration, @viesco, @techniciens
+   force group = administration
+
+# Dépôt public (lecture seule pour tous)
+[commun]
+   comment = Espace Public en Lecture Seule
+   path = /srv/samba/commun
+   browseable = yes
+   read only = yes
+   guest ok = yes
