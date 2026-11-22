@@ -143,9 +143,15 @@ def ensure_system_group(group_name: str, gid: Optional[int] = None) -> bool:
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         print(f"  [Linux Group] Groupe créé : {group_name} (GID: {gid or 'auto'})")
         return True
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        print(f"  [Linux Group] ⚠️ Impossible de créer le groupe {group_name}: {e}")
-        return False
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Fallback automatique sans GID fixe si le GID est déjà utilisé
+        try:
+            subprocess.run(["groupadd", group_name], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(f"  [Linux Group] Groupe créé (GID auto) : {group_name}")
+            return True
+        except Exception as e:
+            print(f"  [Linux Group] ⚠️ Impossible de créer le groupe {group_name}: {e}")
+            return False
 
 
 def ensure_samba_ad_group(group_name: str) -> bool:
@@ -279,7 +285,7 @@ def create_or_update_system_user(
     for sg in secondary_groups:
         ensure_system_group(sg)
     
-    display_name = f"{prenom.capitalize()} {nom.upper()} [{classe}]"
+    display_name = f"{prenom.capitalize()} {nom.upper()}"
     home_dir = f"{homes_base}/{username}"
     
     check_user = subprocess.run(["id", username], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

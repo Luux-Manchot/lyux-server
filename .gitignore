@@ -11,3 +11,6 @@ __pycache__/
 env/
 venv/
 data/uptime-kuma/*.db
+
+# Build artifacts (ISO serveur)
+build/

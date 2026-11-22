@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <title>Discover — Gestionnaire de Logiciels</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../base1/cockpit.css" type="text/css" rel="stylesheet" />
+    <script src="../base1/cockpit.js"></script>
+    <script src="../base1/po.js"></script>
+    <style>
+        :root {
+            --pf-primary: #0066cc;
+            --pf-primary-dark: #004080;
+            --pf-bg-page: #f0f2f5;
+            --pf-bg-card: #ffffff;
+            --pf-border: #d2d2d2;
+            --pf-border-subtle: #e0e0e0;
+            --pf-text-primary: #151515;
+            --pf-text-secondary: #6a6e73;
+            --pf-success-bg: #edf8f0;
+            --pf-success-text: #1e8449;
+            --pf-success-border: #bde7c7;
+            --pf-danger-text: #c9190b;
+        }
+
+        body {
+            background-color: var(--pf-bg-page) !important;
+            color: var(--pf-text-primary) !important;
+            font-family: "Red Hat Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-size: 14px;
+            margin: 0;
+            padding: 24px !important;
+            box-sizing: border-box;
+        }
+
+        .discover-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* En-tête principal */
+        .pf-header-bar {
+            background: var(--pf-bg-card);
+            border: 1px solid var(--pf-border);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        .pf-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+            color: var(--pf-text-primary);
+        }
+
+        .pf-subtitle {
+            font-size: 13px;
+            color: var(--pf-text-secondary);
+            margin: 0;
+        }
+
+        .pf-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Boutons */
+        .pf-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+        .pf-btn-primary {
+            background-color: var(--pf-primary);
+            color: #ffffff;
+            border-color: var(--pf-primary);
+        }
+        .pf-btn-primary:hover {
+            background-color: var(--pf-primary-dark);
+        }
+        .pf-btn-secondary {
+            background-color: transparent;
+            color: var(--pf-primary);
+            border-color: var(--pf-primary);
+        }
+        .pf-btn-secondary:hover {
+            background-color: #e7f1fa;
+        }
+        .pf-btn-default {
+            background-color: #ffffff;
+            color: var(--pf-text-primary);
+            border-color: #b8bbbe;
+        }
+        .pf-btn-default:hover {
+            background-color: #f0f2f5;
+        }
+        .pf-btn-danger {
+            background-color: #ffffff;
+            color: var(--pf-danger-text);
+            border-color: #f0ab00;
+        }
+        .pf-btn-danger:hover {
+            background-color: #fdf2f2;
+            border-color: var(--pf-danger-text);
+        }
+
+        /* Layout Master-Detail */
+        .master-detail-layout {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .master-detail-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Panneau gauche : Master list */
+        .master-pane {
+            background: var(--pf-bg-card);
+            border: 1px solid var(--pf-border);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 180px);
+        }
+
+        .master-search-bar {
+            padding: 16px;
+            border-bottom: 1px solid var(--pf-border-subtle);
+            background: #fafafa;
+        }
+
+        .pf-input-search {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #b8bbbe;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 13px;
+            color: var(--pf-text-primary);
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .pf-input-search:focus {
+            border-color: var(--pf-primary);
+            box-shadow: 0 0 0 1px var(--pf-primary);
+        }
+
+        .master-list-header {
+            padding: 10px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--pf-text-secondary);
+            border-bottom: 1px solid var(--pf-border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-list {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .app-list-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--pf-border-subtle);
+            cursor: pointer;
+            transition: background 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-left: 3px solid transparent;
+        }
+        .app-list-item:hover {
+            background-color: #f7f9fa;
+        }
+        .app-list-item.is-selected {
+            background-color: #e7f1fa;
+            border-left-color: var(--pf-primary);
+        }
+
+        .app-item-info {
+            flex: 1;
+            min-width: 0;
+            padding-right: 12px;
+        }
+
+        .app-item-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--pf-text-primary);
+            margin: 0 0 3px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .app-list-item.is-selected .app-item-title {
+            color: var(--pf-primary-dark);
+            font-weight: 700;
+        }
+
+        .app-item-pkg {
+            font-size: 12px;
+            font-family: monospace;
+            color: var(--pf-text-secondary);
+        }
+
+        /* Badges de statut */
+        .status-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+        .status-badge-deployed {
+            background: var(--pf-success-bg);
+            color: var(--pf-success-text);
+            border: 1px solid var(--pf-success-border);
+        }
+        .status-badge-disabled {
+            background: #f0f0f0;
+            color: var(--pf-text-secondary);
+            border: 1px solid #d2d2d2;
+        }
+
+        /* Panneau droit : Détail de l'application sélectionnée */
+        .detail-pane {
+            background: var(--pf-bg-card);
+            border: 1px solid var(--pf-border);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            padding: 24px;
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--pf-border-subtle);
+            margin-bottom: 24px;
+            gap: 16px;
+        }
+
+        .detail-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--pf-text-primary);
+            margin: 0 0 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .detail-meta {
+            font-size: 13px;
+            color: var(--pf-text-secondary);
+        }
+        .detail-meta code {
+            background: #f0f2f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #151515;
+            font-size: 12px;
+        }
+
+        .detail-section {
+            margin-bottom: 28px;
+        }
+
+        .section-heading {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--pf-text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .detail-desc {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333333;
+            background: #fafafa;
+            border: 1px solid var(--pf-border-subtle);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 0;
+        }
+
+        /* Matrice des droits / autorisations */
+        .groups-matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 12px;
+        }
+
+        .group-checkbox-card {
+            border: 1px solid var(--pf-border-subtle);
+            border-radius: 8px;
+            padding: 12px 14px;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+        .group-checkbox-card:hover {
+            border-color: #b8bbbe;
+            background: #fbfbfb;
+        }
+        .group-checkbox-card.is-checked {
+            border-color: var(--pf-primary);
+            background: #f4f8fc;
+        }
+
+        .group-checkbox-card input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: var(--pf-primary);
+        }
+
+        .group-card-content {
+            flex: 1;
+        }
+        .group-card-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--pf-text-primary);
+            margin: 0 0 2px 0;
+        }
+        .group-card-desc {
+            font-size: 11px;
+            color: var(--pf-text-secondary);
+            margin: 0;
+        }
+
+        /* Paramètres de déploiement et MAJ */
+        .settings-card {
+            border: 1px solid var(--pf-border-subtle);
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--pf-border-subtle);
+        }
+        .setting-row:last-child {
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .setting-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--pf-text-primary);
+            margin-bottom: 2px;
+        }
+        .setting-hint {
+            font-size: 12px;
+            color: var(--pf-text-secondary);
+        }
+
+        /* Toggle switch propre */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .2s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .2s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--pf-primary);
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        /* Barre d'actions en bas de détail */
+        .detail-footer-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 20px;
+            border-top: 1px solid var(--pf-border-subtle);
+            margin-top: 32px;
+        }
+
+        .toast-saved {
+            font-size: 12px;
+            color: var(--pf-success-text);
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .toast-saved.is-visible {
+            opacity: 1;
+        }
+
+        /* Modale d'ajout */
+        .modal-backdrop {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .modal-box {
+            background: #ffffff;
+            border: 1px solid var(--pf-border);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 500px;
+            overflow: hidden;
+        }
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--pf-border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .modal-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0;
+        }
+        .modal-body {
+            padding: 20px;
+        }
+        .modal-footer {
+            padding: 14px 20px;
+            border-top: 1px solid var(--pf-border-subtle);
+            background: #fafafa;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--pf-text-primary);
+            margin-bottom: 6px;
+        }
+        .form-input {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #b8bbbe;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 13px;
+            outline: none;
+        }
+        .form-input:focus {
+            border-color: var(--pf-primary);
+            box-shadow: 0 0 0 1px var(--pf-primary);
+        }
+        .form-hint {
+            font-size: 11px;
+            color: var(--pf-text-secondary);
+            margin-top: 4px;
+        }
+
+        /* État vide */
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+            color: var(--pf-text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="discover-container">
+        <!-- En-tête -->
+        <div class="pf-header-bar">
+            <div>
+                <h1 class="pf-title">Gestionnaire de logiciels</h1>
+                <p class="pf-subtitle">Distribution, autorisations par classe et mises à jour du parc informatique</p>
+            </div>
+            <div class="pf-actions">
+                <button class="pf-btn pf-btn-default" onclick="deployAllToClients()">
+                    Synchroniser le parc client
+                </button>
+                <button class="pf-btn pf-btn-primary" onclick="openModal('modal-add-app')">
+                    Ajouter un paquet Linux (apt)
+                </button>
+            </div>
+        </div>
+
+        <!-- Master-Detail -->
+        <div class="master-detail-layout">
+            <!-- Panneau gauche : Liste des logiciels -->
+            <div class="master-pane">
+                <div class="master-search-bar">
+                    <input type="text" id="app-search-input" class="pf-input-search" placeholder="Rechercher par nom ou paquet..." oninput="renderAppsList()">
+                </div>
+                <div class="master-list-header">
+                    <span>Applications</span>
+                    <span id="apps-count-badge">0 application</span>
+                </div>
+                <div class="app-list" id="apps-list-container">
+                    <!-- Généré par JavaScript -->
+                </div>
+            </div>
+
+            <!-- Panneau droit : Paramètres du logiciel sélectionné -->
+            <div class="detail-pane" id="app-detail-container">
+                <!-- Rendu dynamique par renderAppDetail() -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale d'ajout d'une application -->
+    <div class="modal-backdrop" id="modal-add-app">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">Ajouter un logiciel au catalogue</h3>
+                <button style="border: none; background: none; font-size: 16px; cursor: pointer; color: #6a6e73;" onclick="closeModal('modal-add-app')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="new-pkg-name">Nom du paquet Linux (apt) *</label>
+                    <input type="text" id="new-pkg-name" class="form-input" placeholder="ex: vlc, scratch, blender, kdenlive" oninput="autoFillNewApp()">
+                    <div class="form-hint">Le nom exact du paquet Debian à installer sur les machines du lycée.</div>
+                </div>
+                <div class="form-group">
+                    <label for="new-app-name">Nom d'affichage</label>
+                    <input type="text" id="new-app-name" class="form-input" placeholder="ex: VLC Media Player">
+                </div>
+                <div class="form-group">
+                    <label for="new-app-desc">Description</label>
+                    <input type="text" id="new-app-desc" class="form-input" placeholder="ex: Lecteur multimédia polyvalent pour les cours et présentations.">
+                </div>
+                <div class="form-group">
+                    <label>Autorisations initiales par groupe</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
+                        <label style="font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="chk-group-eleves" checked> Tous les élèves
+                        </label>
+                        <label style="font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="chk-group-profs" checked> Enseignants
+                        </label>
+                        <label style="font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="chk-group-1g1"> Classe 1G1
+                        </label>
+                        <label style="font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="chk-group-1g2"> Classe 1G2
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="pf-btn pf-btn-default" onclick="closeModal('modal-add-app')">Annuler</button>
+                <button class="pf-btn pf-btn-primary" onclick="confirmAddApp()">Ajouter au catalogue</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = `${window.location.protocol}//${window.location.hostname}:8000`;
+        let APPS = [];
+        let selectedAppId = null;
+
+        const AVAILABLE_GROUPS = [
+            { id: "eleves", title: "Tous les élèves", desc: "Accessible par tous les comptes élèves du lycée" },
+            { id: "enseignants", title: "Enseignants", desc: "Corps professoral et intervenants pédagogiques" },
+            { id: "1g1", title: "Classe 1G1", desc: "Élèves de la Première Générale 1" },
+            { id: "1g2", title: "Classe 1G2", desc: "Élèves de la Première Générale 2" },
+            { id: "tg1", title: "Classe TG1", desc: "Élèves de la Terminale Générale 1" },
+            { id: "administration", title: "Administration", desc: "Direction, secrétariat et vie scolaire" }
+        ];
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadApps();
+        });
+
+        async function loadApps() {
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/apps`);
+                APPS = await res.json();
+            } catch(e) {
+                APPS = [
+                    { id: "thonny", name: "Thonny Python IDE", package: "thonny", description: "Environnement de développement Python léger avec débogueur pas-à-pas pour les cours de NSI.", allowed_groups: ["1g1", "tg1", "enseignants"], auto_update: true, deployed: true, version: "4.1.4" },
+                    { id: "libreoffice", name: "LibreOffice Suite", package: "libreoffice", description: "Suite bureautique complète (Writer, Calc, Impress) pour tous les travaux scolaires.", allowed_groups: ["eleves", "enseignants", "administration"], auto_update: true, deployed: true, version: "24.2.1" },
+                    { id: "geogebra", name: "GeoGebra Math", package: "geogebra", description: "Logiciel de géométrie dynamique, algèbre et calcul formel pour mathématiques et physique.", allowed_groups: ["1g1", "1g2", "tg1", "enseignants"], auto_update: true, deployed: true, version: "6.0" },
+                    { id: "avogadro", name: "Avogadro 3D", package: "avogadro", description: "Modélisation moléculaire 3D et chimie computationnelle pour les TP de physique-chimie.", allowed_groups: ["1g2", "enseignants"], auto_update: true, deployed: true, version: "1.99" },
+                    { id: "gimp", name: "GIMP Image Editor", package: "gimp", description: "Retouche d'images et création graphique matricielle avancée.", allowed_groups: ["1g1", "enseignants"], auto_update: false, deployed: true, version: "2.10.38" },
+                    { id: "audacity", name: "Audacity Audio", package: "audacity", description: "Enregistrement et montage sonore multipiste pour les langues vivantes.", allowed_groups: ["eleves", "enseignants"], auto_update: true, deployed: false, version: "3.4.2" },
+                    { id: "veyon-master", name: "Veyon Master", package: "veyon-master", description: "Supervision des écrans élèves, contrôle à distance et diffusion d'écran réservé aux enseignants.", allowed_groups: ["enseignants"], auto_update: true, deployed: true, version: "4.9.0" },
+                    { id: "wireshark", name: "Wireshark Network", package: "wireshark", description: "Analyseur de trames et protocoles réseau pour les TP d'architecture des réseaux en NSI.", allowed_groups: ["1g1", "tg1", "enseignants"], auto_update: false, deployed: true, version: "4.2.3" }
+                ];
+            }
+
+            if (APPS.length > 0 && !selectedAppId) {
+                selectedAppId = APPS[0].id;
+            }
+
+            renderAppsList();
+            renderAppDetail();
+        }
+
+        function renderAppsList() {
+            const listContainer = document.getElementById('apps-list-container');
+            const search = (document.getElementById('app-search-input')?.value || '').toLowerCase().trim();
+            if (!listContainer) return;
+
+            const filtered = APPS.filter(app => {
+                if (!search) return true;
+                return (app.name || '').toLowerCase().includes(search) ||
+                       (app.package || '').toLowerCase().includes(search) ||
+                       (app.description || '').toLowerCase().includes(search);
+            });
+
+            document.getElementById('apps-count-badge').innerText = `${filtered.length} application${filtered.length > 1 ? 's' : ''}`;
+
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div>Aucune application trouvée</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Si l'application sélectionnée n'est pas dans le filtre, sélectionner la première du filtre
+            if (!filtered.some(a => a.id === selectedAppId) && filtered.length > 0) {
+                selectedAppId = filtered[0].id;
+                renderAppDetail();
+            }
+
+            listContainer.innerHTML = filtered.map(app => {
+                const isSelected = app.id === selectedAppId;
+                const isDeployed = app.deployed;
+
+                return `
+                    <div class="app-list-item ${isSelected ? 'is-selected' : ''}" onclick="selectApp('${app.id}')">
+                        <div class="app-item-info">
+                            <div class="app-item-title">${escapeHtml(app.name)}</div>
+                            <div class="app-item-pkg"><code>${escapeHtml(app.package)}</code></div>
+                        </div>
+                        <div>
+                            <span class="status-badge ${isDeployed ? 'status-badge-deployed' : 'status-badge-disabled'}">
+                                ${isDeployed ? 'Déployé' : 'Désactivé'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectApp(id) {
+            selectedAppId = id;
+            renderAppsList();
+            renderAppDetail();
+        }
+
+        function renderAppDetail() {
+            const detailContainer = document.getElementById('app-detail-container');
+            if (!detailContainer) return;
+
+            const app = APPS.find(a => a.id === selectedAppId);
+            if (!app) {
+                detailContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div>Sélectionnez une application dans la liste pour configurer ses paramètres.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const allowed = app.allowed_groups || [];
+            const isDeployed = !!app.deployed;
+            const isAutoUpdate = !!app.auto_update;
+
+            detailContainer.innerHTML = `
+                <!-- En-tête de détail -->
+                <div class="detail-header">
+                    <div>
+                        <h2 class="detail-title">
+                            ${escapeHtml(app.name)}
+                            <span class="status-badge ${isDeployed ? 'status-badge-deployed' : 'status-badge-disabled'}">
+                                ${isDeployed ? 'Déployé sur le parc' : 'Non installé'}
+                            </span>
+                        </h2>
+                        <div class="detail-meta">
+                            Paquet Debian : <code>${escapeHtml(app.package)}</code>
+                            &nbsp;•&nbsp; Version : <strong>${escapeHtml(app.version || 'Dernière version')}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="detail-section">
+                    <div class="section-heading">Description</div>
+                    <p class="detail-desc">${escapeHtml(app.description || 'Aucune description disponible.')}</p>
+                </div>
+
+                <!-- Qui a le droit (Autorisations par groupe et classe) -->
+                <div class="detail-section">
+                    <div class="section-heading">Autorisations d'accès (Qui a le droit)</div>
+                    <div class="groups-matrix-grid">
+                        ${AVAILABLE_GROUPS.map(grp => {
+                            const isChecked = allowed.includes(grp.id);
+                            return `
+                                <label class="group-checkbox-card ${isChecked ? 'is-checked' : ''}">
+                                    <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleGroupPermission('${app.id}', '${grp.id}', this.checked)">
+                                    <div class="group-card-content">
+                                        <div class="group-card-title">${grp.title}</div>
+                                        <div class="group-card-desc">${grp.desc}</div>
+                                    </div>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <!-- Paramètres de déploiement et de mise à jour -->
+                <div class="detail-section">
+                    <div class="section-heading">Paramètres système</div>
+                    <div class="settings-card">
+                        <div class="setting-row">
+                            <div>
+                                <div class="setting-label">Déploiement actif sur les machines clientes</div>
+                                <div class="setting-hint">Installe automatiquement le paquet sur les postes du lycée lors des synchronisations.</div>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" ${isDeployed ? 'checked' : ''} onchange="toggleAppDeployment('${app.id}', this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <div>
+                                <div class="setting-label">Mises à jour automatiques</div>
+                                <div class="setting-hint">Applique les nouvelles versions et correctifs de sécurité dès leur disponibilité sur le serveur.</div>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" ${isAutoUpdate ? 'checked' : ''} onchange="toggleAppAutoUpdate('${app.id}', this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions au pied -->
+                <div class="detail-footer-actions">
+                    <div>
+                        <span id="toast-saved-indicator" class="toast-saved">Paramètres enregistrés</span>
+                    </div>
+                    <div>
+                        <button class="pf-btn pf-btn-danger" onclick="deleteApp('${app.id}')">
+                            Supprimer du catalogue
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function toggleGroupPermission(appId, groupId, isChecked) {
+            const app = APPS.find(a => a.id === appId);
+            if (!app) return;
+
+            let groups = app.allowed_groups || [];
+            if (isChecked && !groups.includes(groupId)) {
+                groups.push(groupId);
+            } else if (!isChecked && groups.includes(groupId)) {
+                groups = groups.filter(g => g !== groupId);
+            }
+            app.allowed_groups = groups;
+
+            await saveAppToServer(appId, { allowed_groups: groups });
+            renderAppDetail();
+        }
+
+        async function toggleAppDeployment(appId, isDeployed) {
+            const app = APPS.find(a => a.id === appId);
+            if (!app) return;
+            app.deployed = isDeployed;
+
+            await saveAppToServer(appId, { deployed: isDeployed });
+            renderAppsList();
+            renderAppDetail();
+        }
+
+        async function toggleAppAutoUpdate(appId, isAutoUpdate) {
+            const app = APPS.find(a => a.id === appId);
+            if (!app) return;
+            app.auto_update = isAutoUpdate;
+
+            await saveAppToServer(appId, { auto_update: isAutoUpdate });
+            renderAppDetail();
+        }
+
+        async function saveAppToServer(appId, payload) {
+            showSavedIndicator();
+            try {
+                await fetch(`${API_BASE}/api/v1/apps/${appId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch(e) {
+                console.warn("Échec sauvegarde serveur :", e);
+            }
+        }
+
+        function showSavedIndicator() {
+            const el = document.getElementById('toast-saved-indicator');
+            if (!el) return;
+            el.classList.add('is-visible');
+            setTimeout(() => {
+                el.classList.remove('is-visible');
+            }, 2000);
+        }
+
+        async function deleteApp(appId) {
+            const app = APPS.find(a => a.id === appId);
+            if (!app) return;
+
+            if (!confirm(`Confirmer la suppression de "${app.name}" du catalogue de logiciels ?`)) return;
+
+            APPS = APPS.filter(a => a.id !== appId);
+            if (selectedAppId === appId) {
+                selectedAppId = APPS.length > 0 ? APPS[0].id : null;
+            }
+
+            try {
+                await fetch(`${API_BASE}/api/v1/apps/${appId}`, {
+                    method: 'DELETE'
+                });
+            } catch(e) {}
+
+            renderAppsList();
+            renderAppDetail();
+        }
+
+        async function deployAllToClients() {
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/apps/deploy`, { method: 'POST' });
+                const data = await res.json();
+                alert(`${data.message} (${data.deployed_count} logiciels synchronisés)`);
+            } catch(e) {
+                alert("Ordre de synchronisation envoyé aux postes clients.");
+            }
+        }
+
+        function autoFillNewApp() {
+            const pkg = (document.getElementById('new-pkg-name').value || '').trim().toLowerCase();
+            const nameInput = document.getElementById('new-app-name');
+            const descInput = document.getElementById('new-app-desc');
+
+            const presets = {
+                'vlc': { name: 'VLC Media Player', desc: 'Lecteur multimédia complet prenant en charge tous les formats audio et vidéo.' },
+                'blender': { name: 'Blender 3D Suite', desc: 'Suite complète de modélisation 3D, animation et rendu pour les arts appliqués.' },
+                'scratch': { name: 'Scratch', desc: 'Environnement d\'apprentissage du code par blocs pour les classes de collège et lycée.' },
+                'kdenlive': { name: 'Kdenlive', desc: 'Éditeur de montage vidéo multipiste libre et professionnel.' },
+                'arduino': { name: 'Arduino IDE', desc: 'Environnement de développement pour la programmation de microcontrôleurs en STI2D.' }
+            };
+
+            if (presets[pkg]) {
+                nameInput.value = presets[pkg].name;
+                descInput.value = presets[pkg].desc;
+            }
+        }
+
+        function openModal(id) {
+            const m = document.getElementById(id);
+            if (m) m.style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            const m = document.getElementById(id);
+            if (m) m.style.display = 'none';
+        }
+
+        async function confirmAddApp() {
+            const pkg = document.getElementById('new-pkg-name').value.trim().toLowerCase();
+            const name = document.getElementById('new-app-name').value.trim() || pkg;
+            const desc = document.getElementById('new-app-desc').value.trim() || `Paquet logiciel ${name} pour les postes LyuX.`;
+
+            if (!pkg) {
+                alert("Veuillez saisir le nom du paquet Debian.");
+                return;
+            }
+
+            const allowed = [];
+            if (document.getElementById('chk-group-eleves').checked) allowed.push('eleves');
+            if (document.getElementById('chk-group-profs').checked) allowed.push('enseignants');
+            if (document.getElementById('chk-group-1g1').checked) allowed.push('1g1');
+            if (document.getElementById('chk-group-1g2').checked) allowed.push('1g2');
+
+            const newApp = {
+                id: pkg,
+                name: name,
+                package: pkg,
+                category: "general",
+                icon: "",
+                description: desc,
+                allowed_groups: allowed,
+                auto_update: true,
+                deployed: true,
+                version: "latest"
+            };
+
+            try {
+                await fetch(`${API_BASE}/api/v1/apps`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newApp)
+                });
+            } catch(e) {}
+
+            APPS.push(newApp);
+            selectedAppId = newApp.id;
+            closeModal('modal-add-app');
+            renderAppsList();
+            renderAppDetail();
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>

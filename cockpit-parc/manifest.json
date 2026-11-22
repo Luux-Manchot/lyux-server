@@ -1,0 +1,22 @@
+{
+    "name": "parc",
+    "tools": {
+        "index": {
+            "label": "Parc & Salles",
+            "order": 2,
+            "docs": [
+                {
+                    "label": "Gestion du Parc et des Salles LyuX",
+                    "url": "https://lyux.lan"
+                }
+            ],
+            "keywords": [
+                {
+                    "matches": ["parc", "salles", "batiments", "ordinateurs", "pc", "machines", "wol", "materiel"]
+                }
+            ]
+        }
+    },
+    "preload": [ "index" ],
+    "content-security-policy": "default-src 'self' 'unsafe-inline' https: http:; img-src 'self' data: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; style-src 'self' 'unsafe-inline' https: http:; font-src 'self' data: https:; connect-src *"
+}

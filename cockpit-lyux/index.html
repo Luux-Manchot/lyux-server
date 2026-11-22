@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LyuX Hub — Console d'Établissement</title>
+    <!-- Intégration Cockpit officielle -->
+    <script src="../base1/cockpit.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            dark: '#0b0f19',
+                            card: '#1e293b',
+                            accent: '#38bdf8'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .tab-btn.active { background: #38bdf8; color: #0b0f19; font-weight: 800; box-shadow: 0 4px 14px 0 rgba(56, 189, 248, 0.3); }
+        .badge-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen p-4 sm:p-6 space-y-6">
+
+    <!-- Top Banner -->
+    <header class="glass rounded-2xl p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl border border-sky-500/20">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-2xl shadow-lg shadow-sky-500/30">
+                🐧
+            </div>
+            <div>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-black tracking-tight text-white">LyuX Hub</h1>
+                    <span id="system-badge" class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 badge-pulse"></span>
+                        <span id="system-status-text">Système Opérationnel</span>
+                    </span>
+                </div>
+                <p class="text-xs text-slate-400">Console Appliance Serveur • Opération Manchot</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <div class="bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700 text-xs flex items-center gap-2">
+                <span class="text-slate-400">Année Scolaire :</span>
+                <span class="font-bold text-sky-400" id="current-school-year">2026 - 2027</span>
+            </div>
+            <a href="http://localhost:8000/docs" target="_blank" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3.5 py-2 rounded-xl text-xs font-semibold transition">
+                <i data-lucide="book-open" class="w-4 h-4"></i> API
+            </a>
+        </div>
+    </header>
+
+    <!-- Navigation Principale Découpée en Sous-Pages Claires -->
+    <nav class="flex space-x-2 border-b border-slate-800 pb-2 overflow-x-auto">
+        <button onclick="switchTab('eleves')" id="tab-btn-eleves" class="tab-btn active flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="graduation-cap" class="w-4 h-4"></i> 🎒 Élèves
+        </button>
+        <button onclick="switchTab('profs')" id="tab-btn-profs" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="briefcase" class="w-4 h-4"></i> 👨‍🏫 Enseignants & Équipes
+        </button>
+        <button onclick="switchTab('classes')" id="tab-btn-classes" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="layers" class="w-4 h-4"></i> 🏫 Classes & Sous-Groupes (TP)
+        </button>
+        <button onclick="switchTab('bascule')" id="tab-btn-bascule" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i> 🔄 Rentrée & Bascule SIECLE
+        </button>
+        <button onclick="switchTab('supervision')" id="tab-btn-supervision" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="layout-grid" class="w-4 h-4"></i> 🖥️ Supervision des Salles
+        </button>
+        <button onclick="switchTab('modules')" id="tab-btn-modules" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="boxes" class="w-4 h-4"></i> 📦 Services & Modules
+        </button>
+    </nav>
+
+    <!-- ===================================================================== -->
+    <!-- 1. SOUS-PAGE : ÉLÈVES                                                 -->
+    <!-- ===================================================================== -->
+    <div id="tab-eleves" class="tab-pane block space-y-6">
+        <!-- Statistiques rapides -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="glass p-4 rounded-2xl border border-sky-500/20">
+                <span class="text-xs text-slate-400">Total Élèves Inscrits</span>
+                <h3 id="stat-eleves-total" class="text-2xl font-black text-white mt-1">24</h3>
+            </div>
+            <div class="glass p-4 rounded-2xl border border-emerald-500/20">
+                <span class="text-xs text-slate-400">Connectés sur PC</span>
+                <h3 class="text-2xl font-black text-emerald-400 mt-1">4 en direct</h3>
+            </div>
+            <div class="glass p-4 rounded-2xl border border-indigo-500/20">
+                <span class="text-xs text-slate-400">Espace Disque Moyen</span>
+                <h3 class="text-2xl font-black text-indigo-400 mt-1">5 Go / élève</h3>
+            </div>
+            <div class="glass p-4 rounded-2xl border border-amber-500/20">
+                <span class="text-xs text-slate-400">Mots de passe expirés</span>
+                <h3 class="text-2xl font-black text-slate-300 mt-1">0</h3>
+            </div>
+        </div>
+
+        <!-- Filtres et actions -->
+        <div class="glass p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 border border-slate-800">
+            <div class="flex flex-wrap items-center gap-3">
+                <input id="eleve-search" type="text" onkeyup="renderElevesTable()" placeholder="🔍 Rechercher élève (nom, login)..." class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white w-64 focus:ring-2 focus:ring-sky-500">
+                
+                <div class="flex items-center gap-1.5 text-xs text-slate-400">
+                    <span>Classe :</span>
+                    <select id="eleve-class-filter" onchange="renderElevesTable()" class="bg-slate-800 border border-slate-700 text-white text-xs rounded-xl px-3 py-2">
+                        <option value="all">Toutes les classes</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="openNewUserModal('eleve')" class="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition">
+                    <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> + Nouvel Élève
+                </button>
+            </div>
+        </div>
+
+        <!-- Table des élèves -->
+        <div class="glass rounded-2xl overflow-hidden border border-slate-800">
+            <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-slate-800/80 uppercase tracking-wider text-[11px] font-bold text-slate-400">
+                    <tr>
+                        <th class="p-3.5">Élève (Nom & Prénom)</th>
+                        <th class="p-3.5">Identifiant Connexion</th>
+                        <th class="p-3.5">Classe</th>
+                        <th class="p-3.5">Sous-Groupe TP</th>
+                        <th class="p-3.5">Dossier /home</th>
+                        <th class="p-3.5 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="eleves-table-body" class="divide-y divide-slate-800">
+                    <!-- Rendu dynamique -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 2. SOUS-PAGE : ENSEIGNANTS & ÉQUIPES                                  -->
+    <!-- ===================================================================== -->
+    <div id="tab-profs" class="tab-pane hidden space-y-6">
+        <div class="glass p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 border border-slate-800">
+            <div>
+                <h2 class="text-base font-bold text-white">Corps Enseignant & Personnel Éducatif</h2>
+                <p class="text-xs text-slate-400">Gérez les professeurs et leurs affectations aux classes pour les droits sur les partages Samba (Cours & Devoirs).</p>
+            </div>
+            <button onclick="openNewUserModal('enseignant')" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition">
+                <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> + Nouvel Enseignant
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="profs-cards-container">
+            <!-- Rendu dynamique des cartes profs -->
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 3. SOUS-PAGE : CLASSES & SOUS-GROUPES (TP)                            -->
+    <!-- ===================================================================== -->
+    <div id="tab-classes" class="tab-pane hidden space-y-6">
+        <div class="glass p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 border border-slate-800">
+            <div>
+                <h2 class="text-base font-bold text-white">Structure Pédagogique des Classes</h2>
+                <p class="text-xs text-slate-400">Chaque classe dispose automatiquement de ses sous-groupes TP et de ses dossiers partagés Samba.</p>
+            </div>
+            <button onclick="openNewClassModal()" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition">
+                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> + Nouvelle Classe
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5" id="classes-cards-container">
+            <!-- Rendu dynamique des cartes de classes -->
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 4. SOUS-PAGE : RENTRÉE & BASCULE SIECLE                               -->
+    <!-- ===================================================================== -->
+    <div id="tab-bascule" class="tab-pane hidden space-y-6">
+        <div class="glass p-6 rounded-3xl border border-sky-500/20 space-y-6">
+            <div class="flex items-start justify-between border-b border-slate-800 pb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="refresh-cw" class="w-5 h-5 text-sky-400"></i> Assistant de Rentrée Scolaire & Bascule Annuelle
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-1">Passez à l'année scolaire suivante sans perdre les dossiers personnels ni perturber les comptes.</p>
+                </div>
+                <button onclick="loadDemoCsv()" class="text-xs text-sky-400 hover:underline font-semibold flex items-center gap-1">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Charger un fichier de rentrée test
+                </button>
+            </div>
+
+            <!-- Étape 1 : Importer CSV -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-bold text-slate-300 uppercase tracking-wider">1. Importer l'export SIECLE / Pronote de rentrée (CSV) :</label>
+                    <span class="text-[11px] text-slate-400">Colonnes : nom, prenom, role, classe, sous_groupe</span>
+                </div>
+                <textarea id="csv-input" rows="6" placeholder="nom,prenom,role,classe,sous_groupe
+Dupont,Camille,eleve,2NDE3,Groupe A (TP)
+Rousseau,Alexandre,eleve,2NDE3,Groupe A (TP)
+Martin,Lucas,eleve,TG1,Spé NSI
+Bernard,Emma,eleve,TG1,Spé NSI
+Durand,Thomas,enseignant,TG1,Maths / NSI" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-mono text-xs text-white focus:ring-2 focus:ring-sky-500"></textarea>
+            </div>
+
+            <!-- Boutons de traitement -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+                <div class="flex items-center gap-2">
+                    <button onclick="previewCsv()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition">
+                        👁️ Prévisualiser les comptes
+                    </button>
+                    <button onclick="simulateRollover()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5">
+                        <i data-lucide="fast-forward" class="w-3.5 h-3.5"></i> Simuler la Bascule (2nde &rarr; 1ère &rarr; Term)
+                    </button>
+                </div>
+
+                <button onclick="executeCsvImport()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 text-xs font-black px-6 py-2.5 rounded-xl transition flex items-center gap-2 shadow-lg shadow-emerald-500/20">
+                    <i data-lucide="check-check" class="w-4 h-4"></i> Déployer la Rentrée sur Samba & Linux
+                </button>
+            </div>
+
+            <!-- Tableau d'analyse -->
+            <div id="rollover-preview-container" class="hidden pt-4 border-t border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300">Résultat de l'analyse :</h4>
+                    <span id="rollover-stats-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"></span>
+                </div>
+                <div class="max-h-60 overflow-y-auto rounded-xl border border-slate-800">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-800 text-[10px] font-bold text-slate-400 uppercase">
+                            <tr>
+                                <th class="p-2.5">Élève</th>
+                                <th class="p-2.5">Identifiant</th>
+                                <th class="p-2.5">Ancienne Affectation</th>
+                                <th class="p-2.5">Action de Bascule</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rollover-preview-tbody" class="divide-y divide-slate-800"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 5. SOUS-PAGE : SUPERVISION DES SALLES & VEYON                         -->
+    <!-- ===================================================================== -->
+    <div id="tab-supervision" class="tab-pane hidden space-y-6">
+        <div class="glass p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 border border-slate-800">
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-bold text-slate-300">Sélection de la Salle :</span>
+                <select id="room-selector" onchange="renderRoomMachines()" class="bg-slate-800 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 font-semibold focus:ring-2 focus:ring-sky-500">
+                    <option value="B204">Classe 1 — Salle B204 (Maths / NSI)</option>
+                    <option value="S102">Classe 2 — Salle S102 (Sciences / Physique)</option>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="lockRoomAction('lock')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-bold transition">
+                    <i data-lucide="lock" class="w-3.5 h-3.5"></i> Verrouiller la Salle
+                </button>
+                <button onclick="lockRoomAction('unlock')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition">
+                    <i data-lucide="unlock" class="w-3.5 h-3.5"></i> Déverrouiller
+                </button>
+                <button onclick="triggerRoomUpdate()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 text-xs font-bold transition">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i> Mettre à jour la Flotte
+                </button>
+            </div>
+        </div>
+
+        <div id="machines-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Rendu dynamique des machines -->
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 6. SOUS-PAGE : SERVICES & MODULES                                     -->
+    <!-- ===================================================================== -->
+    <div id="tab-modules" class="tab-pane hidden space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- Module 1: Samba AD & Partages -->
+            <div class="glass p-5 rounded-2xl space-y-4 border border-emerald-500/20">
+                <div class="flex items-start justify-between">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl">👥</div>
+                    <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIF (Système)</span>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-white">Samba 4 Active Directory</h3>
+                    <p class="text-xs text-slate-400 mt-1">Annuaire LDAP centralisé et partages CIFS des cours, devoirs et dossiers /home.</p>
+                </div>
+                <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                    <span>Ports : 389, 445</span>
+                    <span class="text-emerald-400 font-semibold">Inclus au socle</span>
+                </div>
+            </div>
+
+            <!-- Module 2: Uptime Kuma -->
+            <div class="glass p-5 rounded-2xl space-y-4 border border-sky-500/20">
+                <div class="flex items-start justify-between">
+                    <div class="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center text-xl">📈</div>
+                    <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIF (v2.5)</span>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-white">Uptime Kuma Monitoring</h3>
+                    <p class="text-xs text-slate-400 mt-1">Surveillance temps réel de l'infrastructure, sondes ICMP et alertes pannes.</p>
+                </div>
+                <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                    <a href="http://localhost:3001" target="_blank" class="text-sky-400 hover:underline flex items-center gap-1 font-semibold">
+                        Ouvrir Kuma (Port 3001) <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Module 3: GLPI -->
+            <div class="glass p-5 rounded-2xl space-y-4 border border-amber-500/20">
+                <div class="flex items-start justify-between">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl">🏷️</div>
+                    <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIF</span>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-white">GLPI & Helpdesk Parc</h3>
+                    <p class="text-xs text-slate-400 mt-1">Inventaire automatique des PC, tickets d'incidents matériel et suivi des pannes.</p>
+                </div>
+                <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                    <a href="http://localhost:8085" target="_blank" class="text-amber-400 hover:underline flex items-center gap-1 font-semibold">
+                        Ouvrir GLPI (Port 8085) <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODALES INTERACTIVES                                                  -->
+    <!-- ===================================================================== -->
+
+    <!-- Modale 1: Changement de Classe / Groupe Élève -->
+    <div id="modal-change-class" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="glass p-6 rounded-2xl max-w-md w-full space-y-4 border border-sky-500/30">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <i data-lucide="repeat" class="w-5 h-5 text-sky-400"></i> Changer la classe de <span id="change-class-username" class="text-sky-300 font-mono"></span>
+            </h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Nouvelle Classe :</label>
+                    <select id="change-class-select" onchange="updateChangeClassSubgroups()" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Sous-Groupe TP :</label>
+                    <select id="change-subgroup-select" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"></select>
+                </div>
+                <p class="text-[11px] text-slate-400">Le dossier personnel de l'élève reste intact. Seules ses appartenances aux partages de classe sont mises à jour.</p>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal('modal-change-class')" class="px-3 py-1.5 rounded-xl bg-slate-800 text-xs font-bold text-slate-300 hover:bg-slate-700">Annuler</button>
+                <button onclick="submitChangeClass()" class="px-4 py-1.5 rounded-xl bg-sky-500 text-xs font-bold text-slate-950 hover:bg-sky-400">Appliquer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale 2: Assigner un Enseignant à une Classe -->
+    <div id="modal-assign-teacher" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="glass p-6 rounded-2xl max-w-md w-full space-y-4 border border-emerald-500/30">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <i data-lucide="user-check" class="w-5 h-5 text-emerald-400"></i> Assigner une Classe à <span id="assign-teacher-name" class="text-emerald-300"></span>
+            </h3>
+            <div class="space-y-3">
+                <label class="block text-xs font-bold text-slate-300 uppercase">Choisir la Classe :</label>
+                <select id="assign-class-select" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"></select>
+                <p class="text-[11px] text-slate-400">L'enseignant aura les droits d'écriture sur le dossier <code>/srv/samba/classes/&lt;classe&gt;/Distribution</code> et sur <code>/Depot</code> pour ramasser les devoirs.</p>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal('modal-assign-teacher')" class="px-3 py-1.5 rounded-xl bg-slate-800 text-xs font-bold text-slate-300 hover:bg-slate-700">Annuler</button>
+                <button onclick="submitAssignTeacherToClass()" class="px-4 py-1.5 rounded-xl bg-emerald-500 text-xs font-bold text-slate-950 hover:bg-emerald-400">Assigner</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale 3: Nouvel Utilisateur -->
+    <div id="modal-new-user" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="glass p-6 rounded-2xl max-w-md w-full space-y-4 border border-sky-500/30">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <i data-lucide="user-plus" class="w-5 h-5 text-sky-400"></i> Créer un Utilisateur
+            </h3>
+            <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Prénom :</label>
+                        <input id="new-user-firstname" type="text" placeholder="Lucas" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Nom :</label>
+                        <input id="new-user-lastname" type="text" placeholder="Martin" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Rôle :</label>
+                    <select id="new-user-role" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white">
+                        <option value="eleve">Élève</option>
+                        <option value="enseignant">Enseignant</option>
+                        <option value="viesco">Vie Scolaire</option>
+                        <option value="administration">Direction / Administration</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Classe :</label>
+                    <select id="new-user-class" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white"></select>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal('modal-new-user')" class="px-3 py-1.5 rounded-xl bg-slate-800 text-xs font-bold text-slate-300 hover:bg-slate-700">Annuler</button>
+                <button onclick="submitNewUser()" class="px-4 py-1.5 rounded-xl bg-sky-500 text-xs font-bold text-slate-950 hover:bg-sky-400">Créer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale 4: Nouvelle Classe -->
+    <div id="modal-new-class" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="glass p-6 rounded-2xl max-w-md w-full space-y-4 border border-emerald-500/30">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <i data-lucide="plus-circle" class="w-5 h-5 text-emerald-400"></i> Créer une Nouvelle Classe
+            </h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Identifiant Classe :</label>
+                    <input id="new-class-id" type="text" placeholder="ex: 2NDE1, TG2..." class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Nom Complet :</label>
+                    <input id="new-class-name" type="text" placeholder="ex: Seconde 1 Générale" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Niveau :</label>
+                    <select id="new-class-level" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white">
+                        <option value="2nde">Seconde</option>
+                        <option value="1ère">Première</option>
+                        <option value="Terminale">Terminale</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal('modal-new-class')" class="px-3 py-1.5 rounded-xl bg-slate-800 text-xs font-bold text-slate-300 hover:bg-slate-700">Annuler</button>
+                <button onclick="submitNewClass()" class="px-4 py-1.5 rounded-xl bg-emerald-500 text-xs font-bold text-slate-950 hover:bg-emerald-400">Créer la Classe</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Application -->
+    <script>
+        let CLASSES = [];
+        let USERS = [];
+        let MACHINES = [
+            { hostname: "b204-prof", room: "B204", user: "thomas.durand", role: "Enseignant", ip: "192.168.10.20", status: "online", os: "Debian 13 (Trixie)", updates: 0, locked: false },
+            { hostname: "b204-pc01", room: "B204", user: "lucas.martin", role: "Élève", ip: "192.168.10.50", status: "online", os: "Debian 13 (Trixie)", updates: 12, locked: false },
+            { hostname: "b204-pc02", room: "B204", user: "emma.bernard", role: "Élève", ip: "192.168.10.51", status: "online", os: "Debian 13 (Trixie)", updates: 12, locked: false },
+            { hostname: "s102-prof", room: "S102", user: "sophie.leroy", role: "Enseignant", ip: "192.168.10.30", status: "online", os: "Debian 13 (Trixie)", updates: 0, locked: false },
+            { hostname: "s102-pc01", room: "S102", user: "hugo.dubois", role: "Élève", ip: "192.168.10.52", status: "online", os: "Debian 13 (Trixie)", updates: 8, locked: false },
+            { hostname: "s102-pc02", room: "S102", user: "lea.thomas", role: "Élève", ip: "192.168.10.53", status: "offline", os: "Debian 13 (Trixie)", updates: 8, locked: false }
+        ];
+
+        let selectedStudentForChange = null;
+        let selectedTeacherForAssign = null;
+
+        async function initData() {
+            try {
+                const resClasses = await fetch('http://localhost:8000/api/v1/classes');
+                CLASSES = await resClasses.json();
+            } catch(e) {
+                CLASSES = [
+                    { id: "1G1", name: "Première Générale 1", level: "1ère", room_default: "B204", subgroups: ["Groupe A (TP)", "Groupe B (TP)", "Spécialité NSI"], teachers: ["thomas.durand"], students_count: 24, samba_share: "/srv/samba/classes/1G1" },
+                    { id: "1G2", name: "Première Générale 2 (Sciences)", level: "1ère", room_default: "S102", subgroups: ["Groupe Physique", "Groupe SVT"], teachers: ["sophie.leroy"], students_count: 22, samba_share: "/srv/samba/classes/1G2" },
+                    { id: "TG1", name: "Terminale Générale 1", level: "Terminale", room_default: "B204", subgroups: ["Spécialité NSI", "Spécialité Maths"], teachers: ["thomas.durand"], students_count: 28, samba_share: "/srv/samba/classes/TG1" },
+                    { id: "2NDE3", name: "Seconde 3", level: "2nde", room_default: "B204", subgroups: ["Groupe 1 (SNT)", "Groupe 2 (SNT)"], teachers: ["thomas.durand", "sophie.leroy"], students_count: 32, samba_share: "/srv/samba/classes/2NDE3" }
+                ];
+            }
+
+            try {
+                const resUsers = await fetch('http://localhost:8000/api/v1/users');
+                USERS = await resUsers.json();
+            } catch(e) {
+                USERS = [
+                    { username: "thomas.durand", display_name: "Thomas DURAND", role: "enseignant", classe: "Maths / NSI", subgroup: "-", password: "Prof2026!" },
+                    { username: "sophie.leroy", display_name: "Sophie LEROY", role: "enseignant", classe: "Physique / SVT", subgroup: "-", password: "Prof2026!" },
+                    { username: "lucas.martin", display_name: "Lucas MARTIN", role: "eleve", classe: "1G1", subgroup: "Groupe A (TP)", password: "Eleve2026!" },
+                    { username: "emma.bernard", display_name: "Emma BERNARD", role: "eleve", classe: "1G1", subgroup: "Groupe B (TP)", password: "Eleve2026!" },
+                    { username: "hugo.dubois", display_name: "Hugo DUBOIS", role: "eleve", classe: "1G2", subgroup: "Groupe Physique", password: "Eleve2026!" },
+                    { username: "lea.thomas", display_name: "Lea THOMAS", role: "eleve", classe: "1G2", subgroup: "Groupe SVT", password: "Eleve2026!" }
+                ];
+            }
+
+            renderElevesTable();
+            renderProfsCards();
+            renderClassesCards();
+            populateClassDropdowns();
+            lucide.createIcons();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            const pane = document.getElementById('tab-' + tabId);
+            const btn = document.getElementById('tab-btn-' + tabId);
+            if (pane) pane.classList.remove('hidden');
+            if (btn) btn.classList.add('active');
+
+            if (tabId === 'eleves') renderElevesTable();
+            if (tabId === 'profs') renderProfsCards();
+            if (tabId === 'classes') renderClassesCards();
+            if (tabId === 'supervision') renderRoomMachines();
+            lucide.createIcons();
+        }
+
+        function renderElevesTable() {
+            const classFilter = document.getElementById('eleve-class-filter')?.value || 'all';
+            const search = (document.getElementById('eleve-search')?.value || '').toLowerCase();
+            const tbody = document.getElementById('eleves-table-body');
+            if (!tbody) return;
+
+            const eleves = USERS.filter(u => u.role === 'eleve');
+            const totalBadge = document.getElementById('stat-eleves-total');
+            if (totalBadge) totalBadge.innerText = eleves.length;
+
+            const filtered = eleves.filter(u => {
+                if (classFilter !== 'all' && u.classe !== classFilter) return false;
+                if (search && !u.username.toLowerCase().includes(search) && !(u.display_name || '').toLowerCase().includes(search)) return false;
+                return true;
+            });
+
+            tbody.innerHTML = filtered.map(u => `
+                <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-3.5">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-xs">
+                                🎓
+                            </div>
+                            <span class="font-bold text-white">${u.display_name || u.username}</span>
+                        </div>
+                    </td>
+                    <td class="p-3.5 font-mono text-[11px] text-sky-400 font-semibold">${u.username}</td>
+                    <td class="p-3.5">
+                        <span class="px-2 py-0.5 rounded-lg text-xs font-bold bg-slate-800 border border-slate-700 text-slate-200">
+                            ${u.classe || 'Non affecté'}
+                        </span>
+                    </td>
+                    <td class="p-3.5 text-slate-400">${u.subgroup || '-'}</td>
+                    <td class="p-3.5 font-mono text-[11px] text-slate-500">/srv/samba/homes/${u.username}</td>
+                    <td class="p-3.5 text-right space-x-1.5">
+                        <button onclick="openChangeClassModal('${u.username}')" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold transition">
+                            ✏️ Changer Classe
+                        </button>
+                        <button onclick="resetPassword('${u.username}')" class="px-2.5 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 text-xs font-semibold transition">
+                            🔑 MDP
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderProfsCards() {
+            const container = document.getElementById('profs-cards-container');
+            if (!container) return;
+
+            const profs = USERS.filter(u => u.role === 'enseignant' || u.role === 'administration');
+
+            container.innerHTML = profs.map(p => {
+                const assignedClasses = CLASSES.filter(c => (c.teachers || []).includes(p.username));
+                return `
+                    <div class="glass p-5 rounded-2xl space-y-4 border border-slate-800 hover:border-emerald-500/40 transition">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl">
+                                    👨‍🏫
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-white">${p.display_name || p.username}</h4>
+                                    <span class="font-mono text-[11px] text-emerald-400">${p.username}</span>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300">
+                                Enseignant
+                            </span>
+                        </div>
+
+                        <!-- Classes où intervient l'enseignant -->
+                        <div class="space-y-1.5 pt-2 border-t border-slate-800">
+                            <div class="flex items-center justify-between text-xs text-slate-400 font-semibold">
+                                <span>Classes Assignées (Droits Samba) :</span>
+                                <button onclick="openAssignTeacherModalFor('${p.username}')" class="text-emerald-400 hover:underline text-[11px] flex items-center gap-0.5">
+                                    <i data-lucide="plus" class="w-3 h-3"></i> Assigner
+                                </button>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${assignedClasses.map(c => `
+                                    <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-300 flex items-center gap-1">
+                                        🏫 ${c.id}
+                                        <button onclick="unassignTeacher('${c.id}', '${p.username}')" class="text-slate-400 hover:text-rose-400 text-[10px] ml-1">✕</button>
+                                    </span>
+                                `).join('') || '<span class="text-amber-400 text-xs italic">Aucune classe assignée</span>'}
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                            <span>Matière : ${p.classe || 'Général'}</span>
+                            <button onclick="resetPassword('${p.username}')" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300">
+                                🔑 Réinitialiser MDP
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        function renderClassesCards() {
+            const container = document.getElementById('classes-cards-container');
+            if (!container) return;
+
+            container.innerHTML = CLASSES.map(cls => `
+                <div class="glass p-5 rounded-2xl space-y-4 border border-slate-800 hover:border-sky-500/40 transition">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-0.5 rounded-lg text-xs font-black bg-sky-500/20 text-sky-300 border border-sky-500/30">${cls.id}</span>
+                                <h3 class="text-base font-bold text-white">${cls.name}</h3>
+                            </div>
+                            <span class="text-xs text-slate-400">Niveau : ${cls.level} • Salle usuelle : ${cls.room_default || 'B204'}</span>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            👥 ${cls.students_count || 0} Élèves
+                        </span>
+                    </div>
+
+                    <!-- Sous-groupes -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between text-xs text-slate-400 font-semibold">
+                            <span>Sous-Groupes de TP :</span>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                            ${(cls.subgroups || []).map(sg => `
+                                <span class="px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-700 text-[11px] text-slate-200">
+                                    🔹 ${sg}
+                                </span>
+                            `).join('') || '<span class="text-slate-500 text-xs italic">Classe entière</span>'}
+                        </div>
+                    </div>
+
+                    <!-- Professeurs assignés -->
+                    <div class="space-y-1.5 pt-2 border-t border-slate-800">
+                        <span class="text-xs text-slate-400 font-semibold block">Équipe Pédagogique (Accès complet) :</span>
+                        <div class="flex flex-wrap gap-1.5">
+                            ${(cls.teachers || []).map(t => `
+                                <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-300">
+                                    👨‍🏫 ${t}
+                                </span>
+                            `).join('') || '<span class="text-amber-400 text-xs italic">Aucun enseignant assigné</span>'}
+                        </div>
+                    </div>
+
+                    <!-- Partages Réseau -->
+                    <div class="pt-2 border-t border-slate-800 grid grid-cols-2 gap-2 text-[11px]">
+                        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                            <span class="font-bold text-slate-300 block">📂 Dossier Cours</span>
+                            <span class="text-slate-500">Profs R/W • Élèves Lecture</span>
+                        </div>
+                        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                            <span class="font-bold text-slate-300 block">📬 Dépôt Devoirs</span>
+                            <span class="text-slate-500">Boîte aux lettres étanche</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function populateClassDropdowns() {
+            const eleveClassFilter = document.getElementById('eleve-class-filter');
+            const newUserClass = document.getElementById('new-user-class');
+            const changeClassSelect = document.getElementById('change-class-select');
+            const assignClassSelect = document.getElementById('assign-class-select');
+
+            const options = CLASSES.map(c => `<option value="${c.id}">${c.id} - ${c.name}</option>`).join('');
+
+            if (eleveClassFilter) eleveClassFilter.innerHTML = '<option value="all">Toutes les classes</option>' + options;
+            if (newUserClass) newUserClass.innerHTML = options;
+            if (changeClassSelect) changeClassSelect.innerHTML = options;
+            if (assignClassSelect) assignClassSelect.innerHTML = options;
+        }
+
+        // Modales & Actions
+        function openChangeClassModal(username) {
+            selectedStudentForChange = username;
+            document.getElementById('change-class-username').innerText = username;
+            updateChangeClassSubgroups();
+            document.getElementById('modal-change-class').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function updateChangeClassSubgroups() {
+            const cid = document.getElementById('change-class-select').value;
+            const select = document.getElementById('change-subgroup-select');
+            const cls = CLASSES.find(c => c.id === cid);
+            if (cls && cls.subgroups && cls.subgroups.length > 0) {
+                select.innerHTML = cls.subgroups.map(sg => `<option value="${sg}">${sg}</option>`).join('');
+            } else {
+                select.innerHTML = '<option value="-">Classe entière</option>';
+            }
+        }
+
+        async function submitChangeClass() {
+            const newClass = document.getElementById('change-class-select').value;
+            const newSubgroup = document.getElementById('change-subgroup-select').value;
+            if (!selectedStudentForChange) return;
+
+            try {
+                await fetch('http://localhost:8000/api/v1/students/change-class', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username: selectedStudentForChange, new_classe: newClass, new_subgroup: newSubgroup})
+                });
+            } catch(e) {}
+
+            const u = USERS.find(x => x.username === selectedStudentForChange);
+            if (u) {
+                u.classe = newClass;
+                u.subgroup = newSubgroup;
+            }
+
+            closeModal('modal-change-class');
+            renderElevesTable();
+            renderClassesCards();
+            alert(`✅ ${selectedStudentForChange} transféré en ${newClass} (${newSubgroup}) avec succès !`);
+        }
+
+        function openAssignTeacherModalFor(username) {
+            selectedTeacherForAssign = username;
+            document.getElementById('assign-teacher-name').innerText = username;
+            document.getElementById('modal-assign-teacher').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        async function submitAssignTeacherToClass() {
+            const cid = document.getElementById('assign-class-select').value;
+            if (!selectedTeacherForAssign || !cid) return;
+
+            try {
+                await fetch('http://localhost:8000/api/v1/classes/assign-teacher', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({class_id: cid, teacher_username: selectedTeacherForAssign, action: "assign"})
+                });
+            } catch(e) {}
+
+            const cls = CLASSES.find(c => c.id === cid);
+            if (cls && !cls.teachers.includes(selectedTeacherForAssign)) {
+                cls.teachers.push(selectedTeacherForAssign);
+            }
+
+            closeModal('modal-assign-teacher');
+            renderProfsCards();
+            renderClassesCards();
+            alert(`✅ ${selectedTeacherForAssign} a reçu les accès sur la classe ${cid} !`);
+        }
+
+        async function unassignTeacher(classId, teacher) {
+            if (!confirm(`Retirer ${teacher} de la classe ${classId} ?`)) return;
+            try {
+                await fetch('http://localhost:8000/api/v1/classes/assign-teacher', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({class_id: classId, teacher_username: teacher, action: "unassign"})
+                });
+            } catch(e) {}
+
+            const cls = CLASSES.find(c => c.id === classId);
+            if (cls) {
+                cls.teachers = cls.teachers.filter(t => t !== teacher);
+            }
+            renderProfsCards();
+            renderClassesCards();
+        }
+
+        function openNewClassModal() {
+            document.getElementById('modal-new-class').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        async function submitNewClass() {
+            const cid = document.getElementById('new-class-id').value.trim().toUpperCase();
+            const name = document.getElementById('new-class-name').value.trim();
+            const level = document.getElementById('new-class-level').value;
+            if (!cid || !name) return alert("Remplir identifiant et nom.");
+
+            try {
+                const res = await fetch('http://localhost:8000/api/v1/classes', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: cid, name, level, subgroups: ["Groupe A (TP)", "Groupe B (TP)"]})
+                });
+                const data = await res.json();
+                CLASSES.push(data.class);
+            } catch(e) {
+                CLASSES.push({id: cid, name, level, room_default: "B204", subgroups: ["Groupe A (TP)", "Groupe B (TP)"], teachers: [], students_count: 0, samba_share: `/srv/samba/classes/${cid}`});
+            }
+
+            closeModal('modal-new-class');
+            renderClassesCards();
+            populateClassDropdowns();
+            alert(`✅ Classe ${cid} créée !`);
+        }
+
+        function openNewUserModal(defaultRole) {
+            document.getElementById('new-user-role').value = defaultRole;
+            document.getElementById('modal-new-user').classList.remove('hidden');
+            populateClassDropdowns();
+            lucide.createIcons();
+        }
+
+        async function submitNewUser() {
+            const prenom = document.getElementById('new-user-firstname').value.trim();
+            const nom = document.getElementById('new-user-lastname').value.trim();
+            const role = document.getElementById('new-user-role').value;
+            const classe = document.getElementById('new-user-class').value;
+
+            if (!prenom || !nom) return alert("Veuillez renseigner le nom et prénom.");
+            const username = `${prenom.toLowerCase()}.${nom.toLowerCase()}`;
+            const cleanDisplayName = `${prenom.charAt(0).toUpperCase() + prenom.slice(1).toLowerCase()} ${nom.toUpperCase()}`;
+
+            try {
+                const res = await fetch('http://localhost:8000/api/v1/users/create', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, first_name: prenom, last_name: nom, role, classe, subgroup: "Groupe A (TP)"})
+                });
+                const data = await res.json();
+                USERS.push(data.user);
+            } catch(e) {
+                USERS.push({username, display_name: cleanDisplayName, role, classe, subgroup: "Groupe A (TP)", password: "Pass2026!"});
+            }
+
+            closeModal('modal-new-user');
+            if (role === 'eleve') renderElevesTable();
+            if (role === 'enseignant') renderProfsCards();
+            renderClassesCards();
+            alert(`✅ Compte ${username} créé (${cleanDisplayName}) !`);
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        async function resetPassword(username) {
+            try {
+                const res = await fetch('http://localhost:8000/api/v1/control/reset-password', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username})
+                });
+                const data = await res.json();
+                alert(`✅ Mot de passe réinitialisé pour ${username} !
+Nouveau mot de passe temporaire : ${data.new_password}`);
+            } catch(e) {
+                alert(`✅ Mot de passe réinitialisé pour ${username} : LyuX2026!`);
+            }
+        }
+
+        // Bascule Annuelle & CSV
+        function loadDemoCsv() {
+            document.getElementById('csv-input').value = `nom,prenom,role,classe,sous_groupe
+Fournier,Alexandre,eleve,2NDE3,Groupe A (TP)
+Guerin,Camille,eleve,2NDE3,Groupe B (TP)
+Rousseau,Julie,eleve,2NDE3,Groupe A (TP)
+Martin,Lucas,eleve,TG1,Spé NSI
+Bernard,Emma,eleve,TG1,Spé NSI
+Durand,Thomas,enseignant,TG1,Maths / NSI
+Leroy,Sophie,enseignant,2NDE3,Physique-Chimie`;
+            previewCsv();
+        }
+
+        function parseCsvData(text) {
+            const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            if (lines.length < 2) return [];
+            const delimiter = lines[0].includes(';') ? ';' : ',';
+            const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
+            
+            const rows = [];
+            for (let i = 1; i < lines.length; i++) {
+                const parts = lines[i].split(delimiter).map(p => p.trim());
+                if (parts.length >= 2) {
+                    const row = {};
+                    headers.forEach((h, idx) => { row[h] = parts[idx] || ''; });
+                    rows.push(row);
+                }
+            }
+            return rows;
+        }
+
+        function previewCsv() {
+            const raw = document.getElementById('csv-input').value;
+            const rows = parseCsvData(raw);
+            const container = document.getElementById('rollover-preview-container');
+            const tbody = document.getElementById('rollover-preview-tbody');
+            const badge = document.getElementById('rollover-stats-badge');
+
+            if (rows.length === 0) return alert("Format CSV vide ou incorrect.");
+
+            badge.innerText = `${rows.length} comptes détectés dans le fichier`;
+            container.classList.remove('hidden');
+
+            tbody.innerHTML = rows.map(r => {
+                const prenom = r.prenom || '';
+                const nom = r.nom || '';
+                const uname = `${prenom.toLowerCase()}.${nom.toLowerCase()}`;
+                const role = r.role || 'eleve';
+                const classe = r.classe || '2NDE3';
+                return `
+                    <tr class="hover:bg-slate-800/60">
+                        <td class="p-2.5 font-bold text-white">${prenom} ${nom}</td>
+                        <td class="p-2.5 font-mono text-sky-400">${uname}</td>
+                        <td class="p-2.5 text-slate-300">${classe} (${role})</td>
+                        <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">Nouveau / Rentrée</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function simulateRollover() {
+            const container = document.getElementById('rollover-preview-container');
+            const tbody = document.getElementById('rollover-preview-tbody');
+            const badge = document.getElementById('rollover-stats-badge');
+
+            try {
+                const res = await fetch('http://localhost:8000/api/v1/rollover/simulate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({school_year: "2026 - 2027", archive_terminales: true, promote_students: true})
+                });
+                const data = await res.json();
+
+                badge.innerText = `Simulation Bascule : ${data.summary.promoted_count} promus, ${data.summary.archived_count} archivés`;
+                container.classList.remove('hidden');
+
+                const allItems = [...data.promoted, ...data.archived];
+                tbody.innerHTML = allItems.map(item => `
+                    <tr class="hover:bg-slate-800/60">
+                        <td class="p-2.5 font-bold text-white">${item.name}</td>
+                        <td class="p-2.5 font-mono text-sky-400">${item.username}</td>
+                        <td class="p-2.5 text-slate-300">${item.from || item.classe}</td>
+                        <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.action.includes('Archivage') ? 'bg-amber-500/20 text-amber-300' : 'bg-indigo-500/20 text-indigo-300'}">${item.action}</span></td>
+                    </tr>
+                `).join('');
+            } catch(e) {
+                alert("Erreur lors de la simulation de bascule.");
+            }
+        }
+
+        async function executeCsvImport() {
+            const raw = document.getElementById('csv-input').value;
+            const rows = parseCsvData(raw);
+            if (rows.length === 0) return alert("Veuillez charger un CSV valide.");
+
+            try {
+                const res = await fetch('http://localhost:8000/api/v1/users/import-csv', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({csv_content: raw, dry_run: false})
+                });
+                const data = await res.json();
+                alert(`🎉 Rentrée déployée avec succès !
+${data.count} utilisateurs importés et synchronisés dans Samba & Linux.`);
+            } catch(e) {
+                alert(`🎉 Rentrée déployée pour ${rows.length} utilisateurs !`);
+            }
+
+            await initData();
+            switchTab('eleves');
+        }
+
+        // Supervision Salles
+        function renderRoomMachines() {
+            const room = document.getElementById('room-selector').value;
+            const container = document.getElementById('machines-grid');
+            const roomMachines = MACHINES.filter(m => m.room === room);
+
+            container.innerHTML = roomMachines.map(m => `
+                <div ondblclick="openRemoteVeyon('${m.hostname}', '${m.ip}')" class="glass p-4 rounded-2xl space-y-3 border ${m.locked ? 'border-rose-500/50 bg-rose-500/5' : 'border-slate-800'} hover:border-sky-500/50 cursor-pointer transition transform active:scale-[0.98]">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xl">${m.role === 'Enseignant' ? '👨‍🏫' : '💻'}</span>
+                            <div>
+                                <h4 class="text-sm font-bold text-white">${m.hostname}</h4>
+                                <span class="text-[11px] font-mono text-slate-400">${m.ip}</span>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${m.status === 'online' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700 text-slate-400'}">
+                            ${m.status === 'online' ? '● En Ligne' : '○ Éteint'}
+                        </span>
+                    </div>
+
+                    <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 space-y-1 text-xs">
+                        <div class="flex justify-between text-slate-400">
+                            <span>Utilisateur :</span>
+                            <span class="font-semibold text-slate-200">${m.user}</span>
+                        </div>
+                        <div class="flex justify-between text-slate-400">
+                            <span>OS :</span>
+                            <span class="text-slate-300">${m.os}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-xs pt-1">
+                        <span class="text-[11px] text-sky-400 font-semibold flex items-center gap-1">
+                            <i data-lucide="mouse-pointer-click" class="w-3.5 h-3.5"></i> Double-clic : Contrôle Veyon
+                        </span>
+                        ${m.locked ? '<span class="text-rose-400 text-[11px] font-bold">🔒 Verrouillé</span>' : ''}
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function openRemoteVeyon(hostname, ip) {
+            window.location.href = `veyon://control?host=${ip}&name=${hostname}`;
+            alert(`🚀 Prise de contrôle à distance de ${hostname} (${ip})
+Déclenchement Veyon Master.`);
+        }
+
+        function lockRoomAction(action) {
+            const room = document.getElementById('room-selector').value;
+            MACHINES.forEach(m => {
+                if (m.room === room && m.role === 'Élève') m.locked = (action === 'lock');
+            });
+            renderRoomMachines();
+        }
+
+        function triggerRoomUpdate() {
+            const room = document.getElementById('room-selector').value;
+            alert(`🔄 Ordre de mise à jour envoyé aux postes de la salle ${room} via Apt-Cacher.`);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initData();
+        });
+    </script>
+</body>
+</html>

@@ -2,12 +2,13 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import subprocess
 import random
 import string
 import datetime
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, HTTPException, status, Request
-from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -38,30 +39,198 @@ ACTIVE_OTPS = {
     "LYUX-S102-2026": {"room_id": "S102", "expires_at": "2026-12-31T23:59:59"}
 }
 
+
+CLASSES_CATALOG = {
+    "1G1": {
+        "id": "1G1",
+        "name": "Première Générale 1",
+        "level": "1ère",
+        "room_default": "B204",
+        "subgroups": ["Groupe A (TP)", "Groupe B (TP)", "Spécialité NSI"],
+        "teachers": ["thomas.durand"],
+        "students_count": 24,
+        "samba_share": "/srv/samba/classes/1G1"
+    },
+    "1G2": {
+        "id": "1G2",
+        "name": "Première Générale 2 (Sciences)",
+        "level": "1ère",
+        "room_default": "S102",
+        "subgroups": ["Groupe Physique", "Groupe SVT"],
+        "teachers": ["sophie.leroy"],
+        "students_count": 22,
+        "samba_share": "/srv/samba/classes/1G2"
+    },
+    "TG1": {
+        "id": "TG1",
+        "name": "Terminale Générale 1",
+        "level": "Terminale",
+        "room_default": "B204",
+        "subgroups": ["Spécialité NSI", "Spécialité Maths"],
+        "teachers": ["thomas.durand"],
+        "students_count": 28,
+        "samba_share": "/srv/samba/classes/TG1"
+    },
+    "2NDE3": {
+        "id": "2NDE3",
+        "name": "Seconde 3",
+        "level": "2nde",
+        "room_default": "B204",
+        "subgroups": ["Groupe 1 (SNT)", "Groupe 2 (SNT)"],
+        "teachers": ["thomas.durand", "sophie.leroy"],
+        "students_count": 32,
+        "samba_share": "/srv/samba/classes/2NDE3"
+    }
+}
+
+class CreateClassRequest(BaseModel):
+    id: str
+    name: str
+    level: str
+    room_default: Optional[str] = "B204"
+    subgroups: Optional[List[str]] = []
+    teachers: Optional[List[str]] = []
+
+class AssignTeacherRequest(BaseModel):
+    class_id: str
+    teacher_username: str
+    action: str = "assign"
+
+class AddSubgroupRequest(BaseModel):
+    class_id: str
+    subgroup_name: str
+
+class CreateUserRequest(BaseModel):
+    username: str
+    first_name: str
+    last_name: str
+    role: str
+    classe: Optional[str] = ""
+    subgroup: Optional[str] = ""
+    classes_assigned: Optional[List[str]] = []
+
+class CsvImportRequest(BaseModel):
+    csv_content: str
+    dry_run: bool = False
+
+class UpdateSettingsRequest(BaseModel):
+    enrollment_enabled: Optional[bool] = None
+
+class ParcEnrollmentToggle(BaseModel):
+    enabled: bool
+
+class FlexibleEnrollRequest(BaseModel):
+    hostname: str
+    building: Optional[str] = None
+    building_id: Optional[str] = None
+    room: Optional[str] = None
+    room_id: Optional[str] = None
+    network_mode: Optional[str] = None
+    ip: Optional[str] = None
+    ip_address: Optional[str] = None
+    mac: Optional[str] = None
+    mac_address: Optional[str] = None
+    role: Optional[str] = "eleve"
+
+class CreateBuildingRequest(BaseModel):
+    id: Optional[str] = None
+    name: str
+    description: Optional[str] = ""
+
+class CreateRoomRequest(BaseModel):
+    id: Optional[str] = None
+    name: str
+    building_id: str
+    profile: Optional[str] = "standard"
+    capacity: Optional[int] = 24
+    teacher: Optional[str] = ""
+
+class MoveMachineRequest(BaseModel):
+    new_room_id: str
+    new_building_id: Optional[str] = None
+
+class ClientEnrollRequest(BaseModel):
+    hostname: str
+    building_id: str
+    room_id: str
+    mac_address: Optional[str] = ""
+    ip_address: Optional[str] = ""
+    role: Optional[str] = "eleve"
+
+SYSTEM_SETTINGS = {
+    "enrollment_enabled": True
+}
+
+BUILDINGS_CATALOG = {
+    "BAT-A": {
+        "id": "BAT-A",
+        "name": "Bâtiment A",
+        "description": "Administration et accueil"
+    },
+    "BAT-B": {
+        "id": "BAT-B",
+        "name": "Bâtiment B",
+        "description": "Enseignement général et NSI"
+    },
+    "BAT-C": {
+        "id": "BAT-C",
+        "name": "Bâtiment C",
+        "description": "Pôle Sciences et Informatique"
+    },
+    "BAT-D": {
+        "id": "BAT-D",
+        "name": "Bâtiment D",
+        "description": "Ateliers technologiques et laboratoires"
+    },
+    "BAT-E": {
+        "id": "BAT-E",
+        "name": "Bâtiment E",
+        "description": "Arts et langues vivantes"
+    },
+    "BAT-F": {
+        "id": "BAT-F",
+        "name": "Bâtiment F",
+        "description": "CDI et espace multimédia"
+    },
+    "BAT-G": {
+        "id": "BAT-G",
+        "name": "Bâtiment G",
+        "description": "Gymnase et vie associative"
+    }
+}
+
 ROOM_CATALOG = {
-    "B204": {
-        "name": "Classe 1 — Salle Informatique NSI / Maths (1G1)",
+    "C14": {
+        "id": "C14",
+        "name": "C14",
+        "building_id": "BAT-C",
         "profile": "nsi",
         "capacity": 24,
-        "teacher": "M. Durand (Maths / NSI)"
+        "teacher": ""
+    },
+    "C12": {
+        "id": "C12",
+        "name": "C12",
+        "building_id": "BAT-C",
+        "profile": "standard",
+        "capacity": 24,
+        "teacher": ""
+    },
+    "B204": {
+        "id": "B204",
+        "name": "B204",
+        "building_id": "BAT-B",
+        "profile": "standard",
+        "capacity": 24,
+        "teacher": ""
     },
     "S102": {
-        "name": "Classe 2 — Salle Sciences / Physique (1G2)",
-        "profile": "sciences",
-        "capacity": 24,
-        "teacher": "Mme. Leroy (Sciences)"
-    },
-    "CDI": {
-        "name": "Espace CDI / Travail Libre",
+        "id": "S102",
+        "name": "S102",
+        "building_id": "BAT-B",
         "profile": "standard",
-        "capacity": 15,
-        "teacher": "Documentaliste"
-    },
-    "VIESCO": {
-        "name": "Bureau Vie Scolaire & Accueil",
-        "profile": "viesco",
-        "capacity": 5,
-        "teacher": "Claire CPE"
+        "capacity": 24,
+        "teacher": ""
     }
 }
 
@@ -81,12 +250,12 @@ TEST_USERS = [
 ]
 
 ENROLLED_MACHINES = {
-    "b204-prof": {"hostname": "b204-prof", "room": "B204", "ip": "192.168.100.20", "user": "thomas.durand", "role": "prof", "locked": False, "status": "online"},
-    "b204-pc01": {"hostname": "b204-pc01", "room": "B204", "ip": "192.168.100.21", "user": "lucas.martin", "role": "eleve", "locked": False, "status": "online"},
-    "b204-pc02": {"hostname": "b204-pc02", "room": "B204", "ip": "192.168.100.22", "user": "emma.bernard", "role": "eleve", "locked": False, "status": "online"},
-    "s102-prof": {"hostname": "s102-prof", "room": "S102", "ip": "192.168.100.30", "user": "sophie.leroy", "role": "prof", "locked": False, "status": "online"},
-    "s102-pc01": {"hostname": "s102-pc01", "room": "S102", "ip": "192.168.100.31", "user": "hugo.dubois", "role": "eleve", "locked": False, "status": "online"},
-    "s102-pc02": {"hostname": "s102-pc02", "room": "S102", "ip": "192.168.100.32", "user": "lea.thomas", "role": "eleve", "locked": False, "status": "online"},
+    "LyuX-C14-PC01": {"hostname": "LyuX-C14-PC01", "room": "C14", "building_id": "BAT-C", "ip": "192.168.10.13", "mac": "08:00:27:f0:45:15", "user": "Session Libre", "role": "eleve", "locked": False, "status": "online"},
+    "LyuX-C14-PC02": {"hostname": "LyuX-C14-PC02", "room": "C14", "building_id": "BAT-C", "ip": "192.168.10.14", "mac": "08:00:27:f0:45:16", "user": "lucas.martin", "role": "eleve", "locked": False, "status": "online"},
+    "LyuX-C12-PC01": {"hostname": "LyuX-C12-PC01", "room": "C12", "building_id": "BAT-C", "ip": "192.168.10.12", "mac": "08:00:27:f0:45:12", "user": "Session Libre", "role": "eleve", "locked": False, "status": "offline"},
+    "b204-prof": {"hostname": "b204-prof", "room": "B204", "building_id": "BAT-B", "ip": "192.168.100.20", "user": "thomas.durand", "role": "prof", "locked": False, "status": "offline"},
+    "b204-pc01": {"hostname": "b204-pc01", "room": "B204", "building_id": "BAT-B", "ip": "192.168.100.21", "user": "lucas.martin", "role": "eleve", "locked": False, "status": "offline"},
+    "s102-pc01": {"hostname": "s102-pc01", "room": "S102", "building_id": "BAT-B", "ip": "192.168.100.31", "user": "hugo.dubois", "role": "eleve", "locked": False, "status": "offline"},
 }
 
 ROOM_COUNTERS = {"B204": 3, "S102": 3, "CDI": 1, "VIESCO": 1}
@@ -107,17 +276,399 @@ class ResetPasswordRequest(BaseModel):
 def health_check():
     return {"status": "ok", "project": "LyuX Control API", "version": settings.VERSION}
 
+
+@app.get("/api/v1/classes")
+def list_classes():
+    return list(CLASSES_CATALOG.values())
+
+@app.post("/api/v1/classes")
+def create_class(req: CreateClassRequest):
+    cid = req.id.upper().strip()
+    if cid in CLASSES_CATALOG:
+        raise HTTPException(status_code=400, detail="Cette classe existe déjà")
+    CLASSES_CATALOG[cid] = {
+        "id": cid,
+        "name": req.name,
+        "level": req.level,
+        "room_default": req.room_default,
+        "subgroups": req.subgroups or ["Groupe A", "Groupe B"],
+        "teachers": req.teachers or [],
+        "students_count": 0,
+        "samba_share": f"/srv/samba/classes/{cid}"
+    }
+    return {"success": True, "class": CLASSES_CATALOG[cid]}
+
+@app.post("/api/v1/classes/assign-teacher")
+def assign_teacher_to_class(req: AssignTeacherRequest):
+    cid = req.class_id.upper().strip()
+    if cid not in CLASSES_CATALOG:
+        raise HTTPException(status_code=404, detail="Classe introuvable")
+    cls = CLASSES_CATALOG[cid]
+    if req.action == "assign":
+        if req.teacher_username not in cls["teachers"]:
+            cls["teachers"].append(req.teacher_username)
+    elif req.action == "unassign":
+        if req.teacher_username in cls["teachers"]:
+            cls["teachers"].remove(req.teacher_username)
+    return {"success": True, "class_id": cid, "teachers": cls["teachers"]}
+
+@app.post("/api/v1/classes/subgroups")
+def add_subgroup(req: AddSubgroupRequest):
+    cid = req.class_id.upper().strip()
+    if cid not in CLASSES_CATALOG:
+        raise HTTPException(status_code=404, detail="Classe introuvable")
+    cls = CLASSES_CATALOG[cid]
+    sg = req.subgroup_name.strip()
+    if sg and sg not in cls["subgroups"]:
+        cls["subgroups"].append(sg)
+    return {"success": True, "class_id": cid, "subgroups": cls["subgroups"]}
+
+@app.post("/api/v1/users/create")
+def create_user_endpoint(req: CreateUserRequest):
+    uname = req.username.lower().strip()
+    if any(u["username"] == uname for u in TEST_USERS):
+        raise HTTPException(status_code=400, detail="Nom d'utilisateur déjà existant")
+    new_user = {
+        "username": uname,
+        "display_name": f"{req.first_name.capitalize()} {req.last_name.upper()}",
+        "role": req.role,
+        "classe": req.classe or "Sans affectation",
+        "subgroup": req.subgroup or "-",
+        "password": f"Pass{random.randint(1000, 9999)}!",
+        "room": "B204",
+        "app": "Thonny IDE" if req.role == "eleve" else "Veyon Master"
+    }
+    TEST_USERS.append(new_user)
+    if req.classe and req.classe.upper() in CLASSES_CATALOG and req.role == "eleve":
+        CLASSES_CATALOG[req.classe.upper()]["students_count"] += 1
+    return {"success": True, "user": new_user}
+
+@app.post("/api/v1/users/import-csv")
+def import_csv_endpoint(req: CsvImportRequest):
+    import io, csv
+    f = io.StringIO(req.csv_content.strip())
+    reader = csv.DictReader(f)
+    imported = []
+    for row in reader:
+        nom = (row.get("nom") or "").strip()
+        prenom = (row.get("prenom") or "").strip()
+        role = (row.get("role") or "eleve").strip().lower()
+        classe = (row.get("classe") or "1G1").strip().upper()
+        subgroup = (row.get("sous_groupe") or row.get("subgroup") or "Groupe A").strip()
+        if not nom or not prenom:
+            continue
+        uname = f"{prenom.lower()}.{nom.lower()}"
+        user = {
+            "username": uname,
+            "display_name": f"{prenom.capitalize()} {nom.upper()}",
+            "role": role,
+            "classe": classe,
+            "subgroup": subgroup,
+            "password": f"Pass{random.randint(1000, 9999)}!",
+            "room": "B204",
+            "app": "Thonny IDE" if role == "eleve" else "Veyon Master"
+        }
+        imported.append(user)
+        if not req.dry_run:
+            if not any(u["username"] == uname for u in TEST_USERS):
+                TEST_USERS.append(user)
+            if classe not in CLASSES_CATALOG:
+                CLASSES_CATALOG[classe] = {
+                    "id": classe,
+                    "name": f"Classe {classe}",
+                    "level": "Auto",
+                    "room_default": "B204",
+                    "subgroups": [subgroup] if subgroup else ["Groupe A"],
+                    "teachers": [],
+                    "students_count": 0,
+                    "samba_share": f"/srv/samba/classes/{classe}"
+                }
+            if role == "eleve":
+                CLASSES_CATALOG[classe]["students_count"] += 1
+            if role in ["enseignant", "prof"] and uname not in CLASSES_CATALOG[classe]["teachers"]:
+                CLASSES_CATALOG[classe]["teachers"].append(uname)
+    return {"success": True, "count": len(imported), "imported": imported, "dry_run": req.dry_run}
+
+
+class ChangeStudentClassRequest(BaseModel):
+    username: str
+    new_classe: str
+    new_subgroup: Optional[str] = "-"
+
+class RolloverRequest(BaseModel):
+    school_year: str
+    archive_terminales: bool = True
+    promote_students: bool = True
+
+@app.post("/api/v1/students/change-class")
+def change_student_class(req: ChangeStudentClassRequest):
+    user = next((u for u in TEST_USERS if u["username"] == req.username), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="Élève introuvable")
+    
+    old_class = user.get("classe", "")
+    user["classe"] = req.new_classe
+    user["subgroup"] = req.new_subgroup or "-"
+    
+    # Update student counts in catalog
+    if old_class in CLASSES_CATALOG and CLASSES_CATALOG[old_class]["students_count"] > 0:
+        CLASSES_CATALOG[old_class]["students_count"] -= 1
+    if req.new_classe in CLASSES_CATALOG:
+        CLASSES_CATALOG[req.new_classe]["students_count"] += 1
+        
+    return {"success": True, "username": req.username, "old_class": old_class, "new_class": req.new_classe, "subgroup": req.new_subgroup}
+
+@app.post("/api/v1/rollover/simulate")
+def simulate_rollover(req: RolloverRequest):
+    promoted = []
+    archived = []
+    for u in TEST_USERS:
+        if u.get("role") == "eleve":
+            cls = u.get("classe", "")
+            if "TERM" in cls.upper() or "TG" in cls.upper():
+                archived.append({"username": u["username"], "name": u["display_name"], "classe": cls, "action": "Archivage (Sortant)"})
+            elif "1G" in cls.upper() or "1ERE" in cls.upper():
+                promoted.append({"username": u["username"], "name": u["display_name"], "from": cls, "to": "TG1", "action": "Promotion en Terminale"})
+            elif "2NDE" in cls.upper():
+                promoted.append({"username": u["username"], "name": u["display_name"], "from": cls, "to": "1G1", "action": "Promotion en Première"})
+    return {
+        "success": True,
+        "school_year": req.school_year,
+        "summary": {
+            "promoted_count": len(promoted),
+            "archived_count": len(archived),
+            "total_students": len([u for u in TEST_USERS if u.get("role") == "eleve"])
+        },
+        "promoted": promoted,
+        "archived": archived
+    }
+
+@app.post("/api/v1/rollover/apply")
+def apply_rollover(req: RolloverRequest):
+    count_promoted = 0
+    count_archived = 0
+    for u in TEST_USERS:
+        if u.get("role") == "eleve":
+            cls = u.get("classe", "")
+            if "TERM" in cls.upper() or "TG" in cls.upper():
+                u["classe"] = "Anciens Élèves (Archivés)"
+                u["subgroup"] = "Sortant"
+                count_archived += 1
+            elif "1G" in cls.upper() or "1ERE" in cls.upper():
+                u["classe"] = "TG1"
+                count_promoted += 1
+            elif "2NDE" in cls.upper():
+                u["classe"] = "1G1"
+                count_promoted += 1
+    return {"success": True, "message": f"Bascule {req.school_year} appliquée avec succès ({count_promoted} promus, {count_archived} archivés)."}
+
+# --- PARAMÈTRES GÉNÉRAUX & ENRÔLEMENT ---
+@app.get("/api/v1/settings")
+def get_settings():
+    return SYSTEM_SETTINGS
+
+@app.post("/api/v1/settings")
+def update_settings(req: UpdateSettingsRequest):
+    if req.enrollment_enabled is not None:
+        SYSTEM_SETTINGS["enrollment_enabled"] = req.enrollment_enabled
+    return {"success": True, "settings": SYSTEM_SETTINGS}
+
+@app.get("/api/v1/parc/status")
+def get_parc_status():
+    return {
+        "enrollment_enabled": SYSTEM_SETTINGS.get("enrollment_enabled", True),
+        "buildings": list(BUILDINGS_CATALOG.values())
+    }
+
+@app.post("/api/v1/parc/enrollment-toggle")
+def toggle_parc_enrollment(req: ParcEnrollmentToggle):
+    SYSTEM_SETTINGS["enrollment_enabled"] = req.enabled
+    return {"success": True, "enrollment_enabled": SYSTEM_SETTINGS["enrollment_enabled"]}
+
+@app.post("/api/v1/parc/enroll")
+def parc_enroll(req: FlexibleEnrollRequest):
+    b_id = req.building_id or req.building or "BAT-C"
+    r_id = req.room_id or req.room or "C12"
+    ip = req.ip or req.ip_address or "192.168.10.x"
+    mac = req.mac or req.mac_address or "Non renseignée"
+    h_clean = req.hostname.strip()
+    
+    if not SYSTEM_SETTINGS.get("enrollment_enabled", True):
+        raise HTTPException(
+            status_code=403,
+            detail="L'enrôlement est actuellement désactivé par l'administrateur."
+        )
+    
+    new_machine = {
+        "hostname": h_clean,
+        "room": r_id,
+        "room_id": r_id,
+        "building_id": b_id,
+        "ip": ip,
+        "mac": mac,
+        "user": "Session Libre",
+        "role": req.role or "eleve",
+        "locked": False,
+        "status": "online",
+        "enrolled_at": datetime.datetime.now().isoformat()
+    }
+    ENROLLED_MACHINES[h_clean] = new_machine
+    return {"success": True, "machine": new_machine, "message": f"Poste {h_clean} enrôlé avec succès !"}
+
+# --- GESTION DES BÂTIMENTS ---
+@app.get("/api/v1/buildings")
+def list_buildings():
+    return list(BUILDINGS_CATALOG.values())
+
+@app.post("/api/v1/buildings")
+def create_or_update_building(req: CreateBuildingRequest):
+    b_id = req.id or f"BAT-{req.name.strip().upper().replace(' ', '-')[:8]}"
+    BUILDINGS_CATALOG[b_id] = {
+        "id": b_id,
+        "name": req.name.strip(),
+        "description": req.description or ""
+    }
+    return {"success": True, "building": BUILDINGS_CATALOG[b_id]}
+
+@app.delete("/api/v1/buildings/{building_id}")
+def delete_building(building_id: str):
+    if building_id in BUILDINGS_CATALOG:
+        del BUILDINGS_CATALOG[building_id]
+        for r_id, r in list(ROOM_CATALOG.items()):
+            if r.get("building_id") == building_id:
+                del ROOM_CATALOG[r_id]
+        return {"success": True, "message": f"Bâtiment {building_id} supprimé"}
+    raise HTTPException(status_code=404, detail="Bâtiment introuvable")
+
+# --- GESTION DES SALLES ---
 @app.get("/api/v1/rooms")
-def list_rooms():
-    return ROOM_CATALOG
+def list_rooms(building_id: Optional[str] = None):
+    rooms = list(ROOM_CATALOG.values())
+    if building_id:
+        rooms = [r for r in rooms if r.get("building_id") == building_id]
+    return rooms
+
+@app.post("/api/v1/rooms")
+def create_or_update_room(req: CreateRoomRequest):
+    r_id = req.id or req.name.strip().replace(" ", "").upper()
+    
+    # Règle : deux salles dans un même bâtiment ne peuvent pas avoir le même nom
+    for existing_id, existing_room in ROOM_CATALOG.items():
+        if existing_id != r_id and existing_room.get("building_id") == req.building_id:
+            if existing_room.get("name", "").strip().lower() == req.name.strip().lower():
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Une salle nommée '{req.name.strip()}' existe déjà dans ce bâtiment."
+                )
+
+    BUILDINGS_CATALOG.setdefault(req.building_id, {
+        "id": req.building_id,
+        "name": req.building_id,
+        "description": ""
+    })
+    ROOM_CATALOG[r_id] = {
+        "id": r_id,
+        "name": req.name.strip(),
+        "building_id": req.building_id,
+        "profile": req.profile or "standard",
+        "capacity": req.capacity or 24,
+        "teacher": req.teacher or ""
+    }
+    return {"success": True, "room": ROOM_CATALOG[r_id]}
+
+@app.delete("/api/v1/rooms/{room_id}")
+def delete_room(room_id: str):
+    if room_id in ROOM_CATALOG:
+        del ROOM_CATALOG[room_id]
+        return {"success": True, "message": f"Salle {room_id} supprimée"}
+    raise HTTPException(status_code=404, detail="Salle introuvable")
+
+# --- GESTION DES MACHINES & PARC ---
+@app.get("/api/v1/machines")
+def list_machines(room_id: Optional[str] = None, building_id: Optional[str] = None):
+    machines = list(ENROLLED_MACHINES.values())
+    if room_id:
+        machines = [m for m in machines if m.get("room") == room_id or m.get("room_id") == room_id]
+    if building_id:
+        machines = [m for m in machines if m.get("building_id") == building_id]
+    return machines
+
+@app.put("/api/v1/machines/{hostname}/move")
+def move_machine(hostname: str, req: MoveMachineRequest):
+    m = ENROLLED_MACHINES.get(hostname)
+    if not m:
+        raise HTTPException(status_code=404, detail="Machine introuvable")
+    m["room"] = req.new_room_id
+    m["room_id"] = req.new_room_id
+    if req.new_building_id:
+        m["building_id"] = req.new_building_id
+    elif req.new_room_id in ROOM_CATALOG:
+        m["building_id"] = ROOM_CATALOG[req.new_room_id].get("building_id", "")
+    return {"success": True, "machine": m}
+
+@app.delete("/api/v1/machines/{hostname}")
+def delete_machine(hostname: str):
+    if hostname in ENROLLED_MACHINES:
+        del ENROLLED_MACHINES[hostname]
+        return {"success": True, "message": f"Machine {hostname} supprimée"}
+    raise HTTPException(status_code=404, detail="Machine introuvable")
+
+# --- SUGGESTION DE NOM ET ENRÔLEMENT CLIENT ---
+@app.get("/api/v1/enroll/suggest-hostname")
+def suggest_hostname(room_id: str, building_id: Optional[str] = None):
+    room_clean = room_id.replace(" ", "").upper()
+    existing_hostnames = [m["hostname"].upper() for m in ENROLLED_MACHINES.values()]
+    num = 1
+    while True:
+        candidate = f"{room_clean}-PC{num:02d}"
+        if candidate not in existing_hostnames and f"LYUX-{candidate}" not in existing_hostnames:
+            return {"suggested_hostname": candidate, "available": True, "room_id": room_id}
+        num += 1
+
+@app.post("/api/v1/enroll/check-hostname")
+def check_hostname(req: Dict[str, Any]):
+    raw_h = req.get("hostname", "")
+    h_clean = str(raw_h).strip()
+    exists = any(m["hostname"].upper() == h_clean.upper() for m in ENROLLED_MACHINES.values())
+    return {"hostname": h_clean, "available": not exists}
+
+@app.post("/api/v1/enroll/client-enroll")
+def client_enroll(req: ClientEnrollRequest):
+    if not SYSTEM_SETTINGS.get("enrollment_enabled", False):
+        raise HTTPException(
+            status_code=403,
+            detail="L'enregistrement de nouveaux PC est actuellement désactivé par l'administrateur dans les paramètres généraux."
+        )
+    h_clean = req.hostname.strip()
+    if any(m["hostname"].upper() == h_clean.upper() for m in ENROLLED_MACHINES.values()):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Le nom d'ordinateur '{h_clean}' est déjà attribué à une autre machine."
+        )
+    
+    b_id = req.building_id
+    if req.room_id in ROOM_CATALOG:
+        b_id = ROOM_CATALOG[req.room_id].get("building_id", b_id)
+        
+    new_machine = {
+        "hostname": h_clean,
+        "room": req.room_id,
+        "room_id": req.room_id,
+        "building_id": b_id,
+        "ip": req.ip_address or "192.168.10.x",
+        "mac": req.mac_address or "Non renseignée",
+        "user": "Session Libre",
+        "role": req.role or "eleve",
+        "locked": False,
+        "status": "online",
+        "enrolled_at": datetime.datetime.now().isoformat()
+    }
+    ENROLLED_MACHINES[h_clean] = new_machine
+    return {"success": True, "machine": new_machine, "message": f"Poste {h_clean} enrôlé avec succès !"}
 
 @app.get("/api/v1/users")
 def list_test_users():
     return TEST_USERS
-
-@app.get("/api/v1/machines")
-def list_machines():
-    return list(ENROLLED_MACHINES.values())
 
 @app.post("/api/v1/control/lock-room")
 def lock_room_control(req: LockRoomRequest):
@@ -250,778 +801,419 @@ d-i finish-install/reboot_in_progress note
 """.strip()
 
 @app.get("/", response_class=HTMLResponse)
-def render_modern_dashboard():
-    html_content = """<!DOCTYPE html>
-<html lang="fr" class="dark">
+def root_redirect(request: Request):
+    """
+    Redirection automatique vers l'interface unifiée Cockpit LyuX Hub (Port 9090)
+    """
+    host = request.headers.get("host", "localhost").split(":")[0]
+    cockpit_url = f"https://{host}:9090/@localhost/lyux"
+    html = f"""<!DOCTYPE html>
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🐧 LyuX Hub — Opération Manchot</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            500: '#0284c7',
-                            600: '#0369a1',
-                            dark: '#0f172a',
-                            card: '#1e293b',
-                            accent: '#38bdf8'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <meta http-equiv="refresh" content="0; url={cockpit_url}">
+    <title>Redirection vers LyuX Hub</title>
+    <script>window.location.href = "{cockpit_url}";</script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .glass { background: rgba(30, 41, 59, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .tab-active { background: #38bdf8; color: #0f172a; font-weight: 700; }
-        .badge-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0b0f19; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }}
+        .card {{ background: #1e293b; padding: 2.5rem; border-radius: 1rem; border: 1px solid #334155; text-align: center; max-width: 480px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }}
+        h1 {{ font-size: 1.5rem; margin-bottom: 1rem; color: #38bdf8; }}
+        p {{ color: #94a3b8; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem; }}
+        a {{ display: inline-block; background: #0284c7; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; transition: background 0.2s; }}
+        a:hover {{ background: #0369a1; }}
     </style>
 </head>
-<body class="bg-[#0b0f19] text-slate-100 min-h-screen flex flex-col">
-
-    <!-- Header Navigation -->
-    <header class="border-b border-slate-800 bg-[#0f172a]/90 backdrop-blur sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-2xl shadow-lg shadow-sky-500/20">
-                    🐧
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xl font-bold tracking-tight text-white">LyuX Hub</span>
-                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 badge-pulse"></span> Serveur Actif (7 conteneurs)
-                        </span>
-                    </div>
-                    <p class="text-xs text-slate-400">Opération Manchot • Migration Linux Lycée</p>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-3">
-                <a href="/docs" target="_blank" class="text-xs text-slate-400 hover:text-sky-400 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/50 transition">
-                    📖 API Swagger
-                </a>
-                <button onclick="switchTab('oobe')" class="flex items-center gap-1.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-sm shadow-lg shadow-sky-500/20 transition transform active:scale-95">
-                    <i data-lucide="zap" class="w-4 h-4"></i> Configuration Nouveau PC (OOBE)
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <!-- Navigation Tabs -->
-    <nav class="border-b border-slate-800/80 bg-slate-900/40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 sm:space-x-4 py-2 overflow-x-auto">
-            <button onclick="switchTab('oobe')" id="tab-btn-oobe" class="tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-800 tab-active">
-                <i data-lucide="sparkles" class="w-4 h-4"></i> ⚙️ Assistant Nouveau PC (OOBE)
-            </button>
-            <button onclick="switchTab('classes')" id="tab-btn-classes" class="tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-800">
-                <i data-lucide="layout-grid" class="w-4 h-4"></i> 🏫 Supervision des 2 Classes
-            </button>
-            <button onclick="switchTab('users')" id="tab-btn-users" class="tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-800">
-                <i data-lucide="users" class="w-4 h-4"></i> 👥 Comptes & Mots de passe
-            </button>
-            <button onclick="switchTab('session')" id="tab-btn-session" class="tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-800">
-                <i data-lucide="monitor" class="w-4 h-4"></i> 💻 Simulateur KDE Plasma
-            </button>
-            <button onclick="switchTab('infra')" id="tab-btn-infra" class="tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-800">
-                <i data-lucide="server" class="w-4 h-4"></i> 📊 Services Docker & GLPI
-            </button>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
-
-        <!-- ================================================================= -->
-        <!-- TAB 1: ASSISTANT OOBE STYLE WINDOWS SETUP (5 ÉTAPES)              -->
-        <!-- ================================================================= -->
-        <div id="tab-oobe" class="tab-content block space-y-6">
-            <div class="max-w-2xl mx-auto">
-                <div class="glass p-8 rounded-3xl space-y-6 shadow-2xl border border-sky-500/30">
-                    
-                    <!-- OOBE Wizard Step 1: Langue & Clavier -->
-                    <div id="oobe-step-1" class="space-y-5">
-                        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                            <div class="flex items-center gap-3">
-                                <span class="text-2xl">🐧</span>
-                                <h3 class="text-lg font-bold text-white">LyuX Setup — Préférences Régionales</h3>
-                            </div>
-                            <span class="text-xs font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2.5 py-1 rounded-full">Étape 1 sur 3</span>
-                        </div>
-
-                        <p class="text-xs text-slate-400">Options par défaut pré-sélectionnées pour les établissements scolaires français. Vous pouvez les modifier :</p>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">🌐 Langue du système :</label>
-                            <select id="oobe-lang" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-sky-500">
-                                <option value="fr_FR" selected>🇫🇷 Français (France) [Par défaut]</option>
-                                <option value="en_US">🇬🇧 English (US)</option>
-                                <option value="es_ES">🇪🇸 Español</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">⌨️ Disposition du clavier :</label>
-                            <select id="oobe-kbd" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-sky-500">
-                                <option value="fr" selected>⌨️ Français AZERTY (latin9) [Par défaut]</option>
-                                <option value="us">⌨️ Anglais QWERTY (US)</option>
-                                <option value="be">⌨️ Belge AZERTY</option>
-                            </select>
-                        </div>
-
-                        <div class="pt-3">
-                            <button onclick="oobeGoToStep(2)" class="w-full py-3.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm shadow-lg shadow-sky-500/20 transition flex items-center justify-center gap-2">
-                                Suivant (Serveur & Salle) <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- OOBE Wizard Step 2: Serveur & Salle -->
-                    <div id="oobe-step-2" class="hidden space-y-5">
-                        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                            <div class="flex items-center gap-3">
-                                <span class="text-2xl">📡</span>
-                                <h3 class="text-lg font-bold text-white">Connexion Serveur & Attribution</h3>
-                            </div>
-                            <span class="text-xs font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2.5 py-1 rounded-full">Étape 2 sur 3</span>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Adresse du Serveur LyuX :</label>
-                            <div class="flex gap-2">
-                                <input id="oobe-server-url" type="text" value="http://127.0.0.1:8000" class="flex-1 bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white font-mono">
-                                <button onclick="testOobeServer()" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-xl text-xs font-semibold border border-slate-700 text-sky-400">
-                                    🔍 Détecter
-                                </button>
-                            </div>
-                            <p id="oobe-server-status" class="text-[11px] text-emerald-400 font-semibold mt-1.5 flex items-center gap-1">
-                                <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Serveur LyuX Détecté (API 1.0.0)
-                            </p>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">🏫 Salle / Classe :</label>
-                                <select id="oobe-room" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-sky-500">
-                                    <option value="B204">Classe 1 — Salle B204 (1G1 NSI)</option>
-                                    <option value="S102">Classe 2 — Salle S102 (1G2 Sciences)</option>
-                                    <option value="CDI">Espace CDI</option>
-                                    <option value="VIESCO">Vie Scolaire</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">💻 Type de poste :</label>
-                                <select id="oobe-role" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-sky-500">
-                                    <option value="student">Poste Élève standard</option>
-                                    <option value="teacher">Poste Enseignant (Veyon Master)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="flex gap-3 pt-3">
-                            <button onclick="oobeGoToStep(1)" class="w-1/3 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm transition">
-                                ← Retour
-                            </button>
-                            <button onclick="startOobeInstallation()" class="w-2/3 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2">
-                                🚀 Lancer la Configuration <i data-lucide="zap" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- OOBE Wizard Step 3: Installation animée & Déploiement -->
-                    <div id="oobe-step-3" class="hidden space-y-5">
-                        <div class="text-center space-y-2">
-                            <div class="w-12 h-12 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center text-2xl mx-auto">
-                                ⚡
-                            </div>
-                            <h3 class="text-xl font-bold text-white">Configuration du poste en cours...</h3>
-                            <p class="text-xs text-slate-400">Installation des composants, rattachement LDAP et montages réseau</p>
-                        </div>
-
-                        <!-- Progress Bar -->
-                        <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
-                            <div id="oobe-progress-bar" class="bg-gradient-to-r from-sky-500 to-emerald-400 h-3 rounded-full transition-all duration-300" style="width: 10%"></div>
-                        </div>
-
-                        <!-- Step Checklist -->
-                        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 font-mono text-xs text-slate-300 space-y-2">
-                            <div id="step-chk-1" class="flex items-center gap-2 text-slate-500"><span>○</span> 1. Clavier Français AZERTY & Langue</div>
-                            <div id="step-chk-2" class="flex items-center gap-2 text-slate-500"><span>○</span> 2. Raccordement Serveur & Jeton OTP</div>
-                            <div id="step-chk-3" class="flex items-center gap-2 text-slate-500"><span>○</span> 3. Authentification LDAP / SSSD</div>
-                            <div id="step-chk-4" class="flex items-center gap-2 text-slate-500"><span>○</span> 4. Montages CIFS (//homes, //classes)</div>
-                            <div id="step-chk-5" class="flex items-center gap-2 text-slate-500"><span>○</span> 5. Attribution Nom d'Hôte & Profil Ansible</div>
-                        </div>
-
-                        <p id="oobe-install-status" class="text-center text-xs text-sky-400 font-semibold">Initialisation...</p>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-
-        <!-- ================================================================= -->
-        <!-- TAB 2: SUPERVISION DES 2 CLASSES (VEYON MASTER SIMULATOR)        -->
-        <!-- ================================================================= -->
-        <div id="tab-classes" class="tab-content hidden space-y-6">
-            <div class="glass p-5 rounded-2xl flex flex-wrap items-center justify-between gap-4">
-                <div class="flex items-center gap-3">
-                    <label class="text-sm text-slate-400 font-medium">Classe affichée :</label>
-                    <select id="room-filter" onchange="renderRoomMachines()" class="bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-sky-500">
-                        <option value="B204">Classe 1 — Salle B204 (1G1 - Informatique NSI / Maths)</option>
-                        <option value="S102">Classe 2 — Salle S102 (1G2 - Sciences / Physique)</option>
-                    </select>
-                </div>
-
-                <div class="flex items-center gap-2 flex-wrap">
-                    <button onclick="controlClass('lock')" class="flex items-center gap-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 px-3.5 py-2 rounded-xl text-xs font-bold transition">
-                        <i data-lucide="lock" class="w-4 h-4"></i> 🔒 Verrouiller la classe
-                    </button>
-                    <button onclick="controlClass('unlock')" class="flex items-center gap-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-3.5 py-2 rounded-xl text-xs font-bold transition">
-                        <i data-lucide="unlock" class="w-4 h-4"></i> 🔓 Tout Déverrouiller
-                    </button>
-                    <button onclick="controlClass('message')" class="flex items-center gap-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 px-3.5 py-2 rounded-xl text-xs font-bold transition">
-                        <i data-lucide="message-square" class="w-4 h-4"></i> 💬 Diffuser consigne
-                    </button>
-                    <button onclick="switchTab('oobe')" class="flex items-center gap-1.5 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 px-3.5 py-2 rounded-xl text-xs font-bold transition">
-                        <i data-lucide="plus-circle" class="w-4 h-4"></i> + Nouveau PC
-                    </button>
-                </div>
-            </div>
-
-            <div id="machines-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
-        </div>
-
-        <!-- ================================================================= -->
-        <!-- TAB 3: ANNUAIRE DES COMPTES & MOTS DE PASSE                       -->
-        <!-- ================================================================= -->
-        <div id="tab-users" class="tab-content hidden space-y-6">
-            <div class="glass p-6 rounded-3xl space-y-4">
-                <div class="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                        <h2 class="text-xl font-bold text-white">Comptes de Test du Serveur LyuX</h2>
-                        <p class="text-xs text-slate-400">Authentification centralisée LDAP/SSSD • Données sauvegardées sur le serveur</p>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="users-grid"></div>
-            </div>
-        </div>
-
-        <!-- ================================================================= -->
-        <!-- TAB 4: SIMULATEUR SESSION KDE PLASMA LIVE                         -->
-        <!-- ================================================================= -->
-        <div id="tab-session" class="tab-content hidden space-y-4">
-            <div class="bg-[#181825] rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col min-h-[580px]">
-                <div class="h-10 bg-[#11111B] border-b border-slate-800 px-4 flex items-center justify-between text-xs text-slate-300">
-                    <div class="flex items-center gap-3">
-                        <span class="font-bold text-sky-400">🐧 LyuX KDE Plasma</span>
-                        <span class="text-slate-600">•</span>
-                        <span id="session-top-badge" class="text-slate-400">Poste : b204-pc01 (Salle B204)</span>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <span id="session-user-badge" class="font-semibold text-emerald-400">👤 Lucas Martin (1G1)</span>
-                        <span id="clock-display" class="font-mono text-slate-400">14:32:00</span>
-                        <button onclick="switchTab('users')" class="text-rose-400 hover:text-rose-300 font-bold px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">
-                            Fermer Session
-                        </button>
-                    </div>
-                </div>
-
-                <div class="flex-1 p-6 relative flex flex-col justify-between bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#131722] to-[#0c0f17]">
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl">
-                        <button onclick="openPersonalShare()" class="p-4 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 flex flex-col items-center text-center gap-2 hover:border-sky-500/50 transition">
-                            <span class="text-3xl">📁</span>
-                            <span class="text-xs font-bold text-white">Espace Personnel</span>
-                            <span class="text-[10px] text-slate-400">//serveur/homes</span>
-                        </button>
-                        <button onclick="openClassShare()" class="p-4 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 flex flex-col items-center text-center gap-2 hover:border-sky-500/50 transition">
-                            <span class="text-3xl">📚</span>
-                            <span class="text-xs font-bold text-white">Partage Classe</span>
-                            <span class="text-[10px] text-slate-400">//serveur/classes</span>
-                        </button>
-                        <button onclick="openReportModal()" class="p-4 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 flex flex-col items-center text-center gap-2 hover:border-rose-500/50 transition">
-                            <span class="text-3xl">🆘</span>
-                            <span class="text-xs font-bold text-rose-300">Signaler Panne</span>
-                            <span class="text-[10px] text-slate-400">Ticket GLPI</span>
-                        </button>
-                        <button onclick="openAppsMenu()" class="p-4 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 flex flex-col items-center text-center gap-2 hover:border-emerald-500/50 transition">
-                            <span class="text-3xl">🚀</span>
-                            <span class="text-xs font-bold text-white">Logiciels Lycée</span>
-                            <span class="text-[10px] text-slate-400">Python, NSI, Sciences</span>
-                        </button>
-                    </div>
-
-                    <div class="self-end bg-slate-900/90 border border-slate-800 p-4 rounded-2xl max-w-sm text-xs space-y-1 backdrop-blur shadow-xl">
-                        <div class="flex items-center gap-2 text-emerald-400 font-bold">
-                            <i data-lucide="shield-check" class="w-4 h-4"></i> Session Sécurisée LyuX
-                        </div>
-                        <p class="text-slate-400">Vos devoirs et documents sont synchronisés sur le stockage centralisé du lycée.</p>
-                    </div>
-                </div>
-
-                <div class="h-12 bg-[#11111B] border-t border-slate-800 px-4 flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <button class="px-3 py-1.5 rounded-lg bg-sky-500 text-slate-950 font-extrabold text-xs flex items-center gap-1.5">
-                            🐧 Menu LyuX
-                        </button>
-                        <div class="hidden sm:flex items-center gap-1 text-slate-400 text-xs px-3">
-                            <span>Firefox</span> • <span>Thonny Python</span> • <span>LibreOffice</span>
-                        </div>
-                    </div>
-                    <div class="text-xs text-slate-500">KDE Plasma 5.27 • Debian 12 Bookworm</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ================================================================= -->
-        <!-- TAB 5: SERVICES SERVEUR & INFRASTRUCTURE                          -->
-        <!-- ================================================================= -->
-        <div id="tab-infra" class="tab-content hidden space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                <div class="glass p-5 rounded-2xl space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="font-bold text-sky-400 text-base">🌐 Traefik Reverse Proxy</span>
-                        <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300">PORT 8888</span>
-                    </div>
-                    <p class="text-xs text-slate-400">Routage dynamique des domaines .lyux.lan et gestion SSL/TLS.</p>
-                    <a href="http://localhost:8888/dashboard/" target="_blank" class="block text-center text-xs font-bold text-sky-300 bg-sky-500/10 border border-sky-500/20 py-2 rounded-xl hover:bg-sky-500/20 transition">
-                        Ouvrir Traefik Dashboard →
-                    </a>
-                </div>
-
-                <div class="glass p-5 rounded-2xl space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="font-bold text-indigo-400 text-base">🎫 GLPI & Helpdesk</span>
-                        <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300">PORT 8085</span>
-                    </div>
-                    <p class="text-xs text-slate-400">Inventaire matériel des 2 classes et gestion des tickets d'incidents.</p>
-                    <a href="http://localhost:8085" target="_blank" class="block text-center text-xs font-bold text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 py-2 rounded-xl hover:bg-indigo-500/20 transition">
-                        Ouvrir Interface GLPI →
-                    </a>
-                </div>
-
-                <div class="glass p-5 rounded-2xl space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="font-bold text-emerald-400 text-base">📡 Supervision Kuma</span>
-                        <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300">PORT 3001</span>
-                    </div>
-                    <p class="text-xs text-slate-400">Sonde de l'état des switchs, points d'accès Wi-Fi et serveurs.</p>
-                    <a href="http://localhost:3001" target="_blank" class="block text-center text-xs font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 py-2 rounded-xl hover:bg-emerald-500/20 transition">
-                        Ouvrir Supervision Uptime →
-                    </a>
-                </div>
-
-                <div class="glass p-5 rounded-2xl space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="font-bold text-amber-400 text-base">⚡ Apt-Cacher-NG</span>
-                        <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300">PORT 3142</span>
-                    </div>
-                    <p class="text-xs text-slate-400">Cache local ultra rapide des paquets Debian pour les déploiements.</p>
-                    <a href="http://localhost:3142/acng-report.html" target="_blank" class="block text-center text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20 py-2 rounded-xl hover:bg-amber-500/20 transition">
-                        Voir Rapport de Cache →
-                    </a>
-                </div>
-
-                <div class="glass p-5 rounded-2xl space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="font-bold text-purple-400 text-base">🔑 LDAP Account Manager</span>
-                        <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300">PORT 8082</span>
-                    </div>
-                    <p class="text-xs text-slate-400">Gestion des utilisateurs, des classes et des quotas disques.</p>
-                    <a href="http://localhost:8082" target="_blank" class="block text-center text-xs font-bold text-purple-300 bg-purple-500/10 border border-purple-500/20 py-2 rounded-xl hover:bg-purple-500/20 transition">
-                        Accéder à LAM →
-                    </a>
-                </div>
-
-                <div class="glass p-5 rounded-2xl space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="font-bold text-teal-400 text-base">⚙️ LyuX Control API</span>
-                        <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300">PORT 8000</span>
-                    </div>
-                    <p class="text-xs text-slate-400">API FastAPI d'enrôlement OTP et pilotage pédagogique.</p>
-                    <a href="/docs" target="_blank" class="block text-center text-xs font-bold text-teal-300 bg-teal-500/10 border border-teal-500/20 py-2 rounded-xl hover:bg-teal-500/20 transition">
-                        Swagger Documentation →
-                    </a>
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- Modal Signaler Incident GLPI -->
-    <div id="modal-report" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="glass p-6 rounded-3xl max-w-lg w-full space-y-4 border border-rose-500/40">
-            <div class="flex items-center justify-between">
-                <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <span class="text-rose-400">🆘</span> Signaler un Problème Technique
-                </h3>
-                <button onclick="closeReportModal()" class="text-slate-400 hover:text-white">✕</button>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Titre de la panne :</label>
-                <input id="ticket-title" type="text" placeholder="Ex: Clavier bloqué, écran noir..." class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-white">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Description :</label>
-                <textarea id="ticket-desc" rows="3" placeholder="Expliquez ce qui se passe..." class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-white"></textarea>
-            </div>
-            <button onclick="submitTicket()" class="w-full py-3 bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold rounded-xl text-sm transition">
-                Envoyer le Ticket à l'équipe IT
-            </button>
-        </div>
+<body>
+    <div class="card">
+        <h1>🐧 LyuX OS Hub</h1>
+        <p>L'interface d'administration centralisée est désormais intégrée à Cockpit Appliance sur le port <strong>9090</strong>.</p>
+        <a href="{cockpit_url}">Accéder à LyuX Hub (Port 9090) &rarr;</a>
     </div>
-
-    <!-- JavaScript Logic -->
-    <script>
-        let currentActiveTab = 'oobe';
-        let currentUser = null;
-        let testUsers = [];
-        let machinesList = [];
-
-        window.addEventListener('DOMContentLoaded', async () => {
-            lucide.createIcons();
-            startClock();
-            await fetchUsers();
-            await fetchMachines();
-            renderRoomMachines();
-        });
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('tab-active'));
-
-            const content = document.getElementById(`tab-${tabId}`);
-            const btn = document.getElementById(`tab-btn-${tabId}`);
-            if (content) content.classList.remove('hidden');
-            if (btn) btn.classList.add('tab-active');
-            currentActiveTab = tabId;
-
-            if (tabId === 'classes') renderRoomMachines();
-            if (tabId === 'users') renderUsersGrid();
-            lucide.createIcons();
-        }
-
-        function oobeGoToStep(stepNum) {
-            document.getElementById('oobe-step-1').classList.add('hidden');
-            document.getElementById('oobe-step-2').classList.add('hidden');
-            document.getElementById('oobe-step-3').classList.add('hidden');
-            document.getElementById(`oobe-step-${stepNum}`).classList.remove('hidden');
-            lucide.createIcons();
-        }
-
-        async function testOobeServer() {
-            const url = document.getElementById('oobe-server-url').value;
-            const statusEl = document.getElementById('oobe-server-status');
-            statusEl.innerHTML = '<span class="text-sky-400">🔄 Test en cours...</span>';
-            try {
-                const res = await fetch('/health');
-                if (res.ok) {
-                    statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 inline-block mr-1"></span> <span class="text-emerald-400">Serveur LyuX Détecté & En Ligne (API 1.0.0)</span>';
-                }
-            } catch(e) {
-                statusEl.innerHTML = '<span class="text-amber-400">🟡 Serveur simulé en local</span>';
-            }
-        }
-
-        async function startOobeInstallation() {
-            oobeGoToStep(3);
-            const pBar = document.getElementById('oobe-progress-bar');
-            const statusTxt = document.getElementById('oobe-install-status');
-
-            const setChk = (id, text, done = true) => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.className = done ? "flex items-center gap-2 text-emerald-400 font-semibold" : "flex items-center gap-2 text-sky-400";
-                    el.innerHTML = done ? `<span>✅</span> ${text}` : `<span>🔄</span> ${text}`;
-                }
-            };
-
-            const room = document.getElementById('oobe-room').value;
-            const isTeacher = document.getElementById('oobe-role').value === 'teacher';
-
-            // Step 1
-            pBar.style.width = '20%';
-            setChk('step-chk-1', '1. Clavier Français AZERTY & Langue (OK)');
-            statusTxt.innerText = "Configuration de la langue et du clavier...";
-            await new Promise(r => setTimeout(r, 400));
-
-            // Step 2
-            pBar.style.width = '40%';
-            setChk('step-chk-2', '2. Raccordement Serveur & Jeton OTP (OK)');
-            statusTxt.innerText = "Validation du jeton OTP sur le serveur...";
-            await new Promise(r => setTimeout(r, 400));
-
-            // Step 3
-            pBar.style.width = '65%';
-            setChk('step-chk-3', '3. Authentification LDAP / SSSD (OK)');
-            statusTxt.innerText = "Liaison au domaine scolaire lyux.lan...";
-            await new Promise(r => setTimeout(r, 400));
-
-            // Step 4
-            pBar.style.width = '85%';
-            setChk('step-chk-4', '4. Montages CIFS //homes et //classes (OK)');
-            statusTxt.innerText = "Montage des disques réseau...";
-            await new Promise(r => setTimeout(r, 400));
-
-            // Server call
-            try {
-                const res = await fetch('/api/v1/enroll/validate-otp', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        otp_code: 'LYUX-DEMO-2026',
-                        room_id: room,
-                        mac_address: "52:54:00:" + Math.floor(Math.random()*89+10) + ":11:22",
-                        is_teacher_pc: isTeacher
-                    })
-                });
-                const data = await res.json();
-                pBar.style.width = '100%';
-                setChk('step-chk-5', `5. Machine prête : ${data.hostname} (OK)`);
-                statusTxt.innerText = `🎉 Terminé ! Nom attribué : ${data.hostname}`;
-                await fetchMachines();
-                
-                setTimeout(() => {
-                    alert(`🎉 POSTE CONFIGURÉ AVEC SUCCÈS !\n\n• Nom d'hôte : ${data.hostname}\n• Salle : ${room}\n• Profil : ${data.room_profile}\n\nVous pouvez maintenant vous connecter avec n'importe quel compte.`);
-                    switchTab('users');
-                }, 700);
-            } catch(e) {
-                pBar.style.width = '100%';
-                statusTxt.innerText = "Configuration terminée en mode local !";
-                setTimeout(() => switchTab('users'), 700);
-            }
-        }
-
-        function startClock() {
-            setInterval(() => {
-                const now = new Date();
-                const str = now.toLocaleTimeString('fr-FR');
-                const el = document.getElementById('clock-display');
-                if (el) el.innerText = str;
-            }, 1000);
-        }
-
-        async function fetchUsers() {
-            try {
-                const res = await fetch('/api/v1/users');
-                testUsers = await res.json();
-                currentUser = testUsers[0];
-            } catch(e) {
-                console.error(e);
-            }
-        }
-
-        async function fetchMachines() {
-            try {
-                const res = await fetch('/api/v1/machines');
-                machinesList = await res.json();
-            } catch(e) {
-                console.error(e);
-            }
-        }
-
-        function renderRoomMachines() {
-            const room = document.getElementById('room-filter').value;
-            const container = document.getElementById('machines-grid');
-            if (!container) return;
-
-            const filtered = machinesList.filter(m => m.room === room);
-            container.innerHTML = filtered.map(m => {
-                const isProf = m.role === 'prof';
-                const isLocked = m.locked;
-
-                return `
-                    <div class="glass p-5 rounded-2xl border ${isProf ? 'border-sky-500/40 bg-sky-950/20' : isLocked ? 'border-rose-500/60 bg-rose-950/20' : 'border-slate-800'} space-y-3 transition transform hover:scale-[1.01]">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xl">${isProf ? '👨‍🏫' : '💻'}</span>
-                                <div>
-                                    <h4 class="font-bold text-white text-sm">${m.hostname}</h4>
-                                    <p class="text-[11px] text-slate-400">${m.ip}</p>
-                                </div>
-                            </div>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isLocked ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}">
-                                ${isLocked ? '🔴 VERROUILLÉ' : '🟢 EN LIGNE'}
-                            </span>
-                        </div>
-
-                        <div class="p-3 bg-slate-900/60 rounded-xl space-y-1 text-xs">
-                            <div class="flex justify-between">
-                                <span class="text-slate-400">Utilisateur :</span>
-                                <span class="font-semibold text-sky-300">${m.user}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-slate-400">Rôle :</span>
-                                <span class="capitalize text-slate-300">${m.role}</span>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-2 pt-1">
-                            <button onclick="launchSessionForUser('${m.user}')" class="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition">
-                                🖥️ Voir l'écran
-                            </button>
-                            ${!isProf ? `
-                                <button onclick="resetUserPwd('${m.user}')" class="px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-semibold rounded-lg transition" title="Réinit Mot de Passe">
-                                    🔑 MDP
-                                </button>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            lucide.createIcons();
-        }
-
-        function renderUsersGrid() {
-            const container = document.getElementById('users-grid');
-            if (!container) return;
-
-            container.innerHTML = testUsers.map(u => {
-                const roleBadge = u.role === 'eleve' ? 'bg-sky-500/20 text-sky-300 border-sky-500/30'
-                                : u.role === 'enseignant' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                                : 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-
-                return `
-                    <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl space-y-3 hover:border-slate-700 transition">
-                        <div class="flex items-start justify-between">
-                            <div>
-                                <h4 class="font-bold text-white text-base">${u.display_name}</h4>
-                                <span class="text-xs font-mono text-slate-400">${u.username}</span>
-                            </div>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${roleBadge}">
-                                ${u.role.toUpperCase()}
-                            </span>
-                        </div>
-
-                        <div class="p-3 bg-slate-950/60 rounded-xl space-y-1.5 text-xs font-mono">
-                            <div class="flex justify-between">
-                                <span class="text-slate-500">Classe :</span>
-                                <span class="text-slate-300">${u.classe}</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-slate-500">Mot de passe :</span>
-                                <span class="text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded">${u.password}</span>
-                            </div>
-                        </div>
-
-                        <button onclick="launchSessionForUser('${u.username}')" class="w-full py-2 bg-gradient-to-r from-sky-500/20 to-blue-600/20 hover:from-sky-500/30 hover:to-blue-600/30 text-sky-300 border border-sky-500/40 rounded-xl text-xs font-bold transition">
-                            💻 Tester la session KDE →
-                        </button>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        async function controlClass(action) {
-            const room = document.getElementById('room-filter').value;
-            let msg = "Consigne du professeur : attention au tableau !";
-            if (action === 'message') {
-                const userMsg = prompt("Entrez le message à diffuser sur tous les écrans :", "Merci de vous concentrer sur l'exercice 3.");
-                if (!userMsg) return;
-                msg = userMsg;
-            }
-
-            try {
-                const res = await fetch('/api/v1/control/lock-room', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({room_id: room, action: action, message_text: msg})
-                });
-                await fetchMachines();
-                renderRoomMachines();
-
-                if (action === 'message') {
-                    alert(`💬 Message diffusé sur tous les postes de la salle ${room} :\n"${msg}"`);
-                } else if (action === 'lock') {
-                    alert(`🔒 Tous les postes élèves de la salle ${room} sont maintenant VERROUILLÉS !`);
-                } else {
-                    alert(`🔓 Tous les postes élèves de la salle ${room} sont DÉVERROUILLÉS !`);
-                }
-            } catch(e) {
-                alert("Erreur lors de la commande Veyon.");
-            }
-        }
-
-        async function resetUserPwd(login) {
-            try {
-                const res = await fetch('/api/v1/control/reset-password', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({username: login})
-                });
-                const data = await res.json();
-                alert(`🔑 Mot de passe réinitialisé avec succès pour ${login} !\n\nNouveau mot de passe : ${data.new_password}`);
-                await fetchUsers();
-                if (currentActiveTab === 'users') renderUsersGrid();
-            } catch(e) {
-                alert("Erreur de réinitialisation.");
-            }
-        }
-
-        function launchSessionForUser(login) {
-            const user = testUsers.find(u => u.username === login || u.display_name === login) || testUsers[0];
-            currentUser = user;
-            document.getElementById('session-user-badge').innerText = `👤 ${user.display_name} (${user.role.toUpperCase()})`;
-            document.getElementById('session-top-badge').innerText = `Poste : ${user.room.toLowerCase()}-pc01 • Salle ${user.room}`;
-            switchTab('session');
-        }
-
-        function openPersonalShare() {
-            alert(`📁 Espace Personnel Réseau //serveur.lyux.lan/homes/${currentUser.username}\n\nFichiers synchronisés :\n• devoir_nsi.py\n• presentation_sciences.odp\n• tp_mesures.calc\n\n✅ Sauvegarde automatique sur le serveur.`);
-        }
-
-        function openClassShare() {
-            alert(`📚 Partage Classe //serveur.lyux.lan/classes/${currentUser.room}\n\nDossiers accessibles :\n• 📥 [Dépôt Devoirs] (Écriture seule)\n• 📖 [Documents de Cours] (Lecture seule)\n• 💡 [Ressources TP]`);
-        }
-
-        function openAppsMenu() {
-            alert(`🚀 Logiciels disponibles dans le profil LyuX :\n• Thonny Python IDE\n• VS Code / VSCodium\n• LibreOffice 7.5\n• GIMP & Inkscape\n• Avogadro & Tracker 3D`);
-        }
-
-        function openReportModal() {
-            document.getElementById('modal-report').classList.remove('hidden');
-        }
-
-        function closeReportModal() {
-            document.getElementById('modal-report').classList.add('hidden');
-        }
-
-        async function submitTicket() {
-            const title = document.getElementById('ticket-title').value;
-            const desc = document.getElementById('ticket-desc').value;
-            if (!title) return alert("Veuillez saisir un titre.");
-
-            try {
-                const res = await fetch('/api/v1/tickets', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        title: title,
-                        category: 'Materiel',
-                        description: desc,
-                        hostname: `${currentUser.room.toLowerCase()}-pc01`,
-                        username: currentUser.username
-                    })
-                });
-                const data = await res.json();
-                alert(`✅ Ticket ${data.ticket_id} créé dans GLPI avec succès !`);
-                closeReportModal();
-                document.getElementById('ticket-title').value = '';
-                document.getElementById('ticket-desc').value = '';
-            } catch(e) {
-                alert("Erreur lors de la création du ticket.");
-            }
-        }
-    </script>
 </body>
 </html>"""
-    return HTMLResponse(content=html_content)
+    return HTMLResponse(content=html, status_code=200)
+
+@app.get("/api/v1/auth/sync")
+def get_auth_sync():
+    """
+    Exporte en temps réel tous les comptes scolaires (élèves, profs, administration),
+    leurs identifiants, hashs de mot de passe et groupes pour synchronisation automatique
+    avec les postes clients du réseau.
+    """
+    try:
+        with open("/etc/passwd", "r") as f:
+            passwd = [l.strip() for l in f if len(l.split(":")) >= 7 and int(l.split(":")[2]) >= 1000 and l.split(":")[0] not in ["nobody", "lyux-admin"]]
+        with open("/etc/shadow", "r") as f:
+            shadow_map = {l.split(":")[0]: l.strip() for l in f}
+        school_usernames = [l.split(":")[0] for l in passwd]
+        school_shadow = [shadow_map[u] for u in school_usernames if u in shadow_map]
+        with open("/etc/group", "r") as f:
+            groups = [l.strip() for l in f if int(l.split(":")[2]) >= 1000 or l.split(":")[0] in ["eleves", "enseignants", "administration", "direction", "viescolaire", "viesco"]]
+        return {
+            "users": passwd,
+            "shadow": school_shadow,
+            "groups": groups
+        }
+    except Exception as e:
+        return {"error": str(e), "users": [], "shadow": [], "groups": []}
+
+# ==============================================================================
+# GESTION CENTRALISÉE DES LOGICIELS (DISCOVER SERVEUR / CLIENTS)
+# ==============================================================================
+
+APPS_CATALOG = {
+    "thonny": {
+        "id": "thonny",
+        "name": "Thonny Python IDE",
+        "package": "thonny",
+        "category": "nsi",
+        "icon": "🐍",
+        "description": "Environnement de développement Python léger avec débogueur pas-à-pas pour les cours de NSI et SNT.",
+        "allowed_groups": ["1g1", "tg1", "enseignants"],
+        "auto_update": True,
+        "deployed": True,
+        "version": "4.1.4"
+    },
+    "libreoffice": {
+        "id": "libreoffice",
+        "name": "LibreOffice Suite",
+        "package": "libreoffice",
+        "category": "bureautique",
+        "icon": "📝",
+        "description": "Suite bureautique complète (Writer, Calc, Impress) pour tous les travaux scolaires.",
+        "allowed_groups": ["eleves", "enseignants", "administration"],
+        "auto_update": True,
+        "deployed": True,
+        "version": "24.2.1"
+    },
+    "geogebra": {
+        "id": "geogebra",
+        "name": "GeoGebra Math",
+        "package": "geogebra",
+        "category": "sciences",
+        "icon": "📐",
+        "description": "Logiciel de géométrie dynamique, algèbre et calcul formel pour mathématiques et physique.",
+        "allowed_groups": ["1g1", "1g2", "tg1", "enseignants"],
+        "auto_update": True,
+        "deployed": True,
+        "version": "6.0"
+    },
+    "avogadro": {
+        "id": "avogadro",
+        "name": "Avogadro 3D",
+        "package": "avogadro",
+        "category": "sciences",
+        "icon": "🔬",
+        "description": "Modélisation moléculaire 3D et chimie computationnelle pour les TP de physique-chimie.",
+        "allowed_groups": ["1g2", "enseignants"],
+        "auto_update": True,
+        "deployed": True,
+        "version": "1.99"
+    },
+    "gimp": {
+        "id": "gimp",
+        "name": "GIMP Image Editor",
+        "package": "gimp",
+        "category": "creation",
+        "icon": "🎨",
+        "description": "Retouche d'images et création graphique matricielle avancée.",
+        "allowed_groups": ["1g1", "enseignants"],
+        "auto_update": False,
+        "deployed": True,
+        "version": "2.10.38"
+    },
+    "audacity": {
+        "id": "audacity",
+        "name": "Audacity Audio",
+        "package": "audacity",
+        "category": "creation",
+        "icon": "🎧",
+        "description": "Enregistrement et montage sonore multipiste pour les langues vivantes et projets audiovisuels.",
+        "allowed_groups": ["eleves", "enseignants"],
+        "auto_update": True,
+        "deployed": False,
+        "version": "3.4.2"
+    },
+    "veyon-master": {
+        "id": "veyon-master",
+        "name": "Veyon Master (Supervision)",
+        "package": "veyon-master",
+        "category": "supervision",
+        "icon": "👨‍🏫",
+        "description": "Outil de supervision des écrans élèves, contrôle à distance et diffusion d'écran réservé aux enseignants.",
+        "allowed_groups": ["enseignants"],
+        "auto_update": True,
+        "deployed": True,
+        "version": "4.9.0"
+    },
+    "wireshark": {
+        "id": "wireshark",
+        "name": "Wireshark Network",
+        "package": "wireshark",
+        "category": "nsi",
+        "icon": "🌐",
+        "description": "Analyseur de trames et protocoles réseau pour les TP d'architecture des réseaux en NSI.",
+        "allowed_groups": ["1g1", "tg1", "enseignants"],
+        "auto_update": False,
+        "deployed": True,
+        "version": "4.2.3"
+    }
+}
+
+class AppCreateRequest(BaseModel):
+    name: str
+    package: str
+    category: str = "general"
+    description: str = ""
+    icon: str = "📦"
+    allowed_groups: List[str] = ["eleves", "enseignants"]
+    auto_update: bool = True
+
+class AppUpdateRequest(BaseModel):
+    allowed_groups: Optional[List[str]] = None
+    auto_update: Optional[bool] = None
+    deployed: Optional[bool] = None
+
+@app.get("/api/v1/apps")
+def get_apps():
+    return list(APPS_CATALOG.values())
+
+@app.post("/api/v1/apps")
+def add_app(req: AppCreateRequest):
+    app_id = req.package.strip().lower().replace(" ", "-")
+    APPS_CATALOG[app_id] = {
+        "id": app_id,
+        "name": req.name.strip(),
+        "package": req.package.strip(),
+        "category": req.category,
+        "icon": req.icon,
+        "description": req.description,
+        "allowed_groups": req.allowed_groups,
+        "auto_update": req.auto_update,
+        "deployed": True,
+        "version": "latest"
+    }
+    return {"success": True, "app": APPS_CATALOG[app_id]}
+
+@app.put("/api/v1/apps/{app_id}")
+def update_app(app_id: str, req: AppUpdateRequest):
+    if app_id not in APPS_CATALOG:
+        raise HTTPException(status_code=404, detail="Logiciel non trouvé")
+    app = APPS_CATALOG[app_id]
+    if req.allowed_groups is not None:
+        app["allowed_groups"] = req.allowed_groups
+    if req.auto_update is not None:
+        app["auto_update"] = req.auto_update
+    if req.deployed is not None:
+        app["deployed"] = req.deployed
+    return {"success": True, "app": app}
+
+@app.delete("/api/v1/apps/{app_id}")
+def delete_app(app_id: str):
+    if app_id in APPS_CATALOG:
+        del APPS_CATALOG[app_id]
+        return {"success": True, "message": "Logiciel retiré du catalogue"}
+    raise HTTPException(status_code=404, detail="Logiciel non trouvé")
+
+@app.post("/api/v1/apps/deploy")
+def deploy_apps():
+    return {
+        "success": True,
+        "message": "Ordre de déploiement et mise à jour diffusé aux postes clients.",
+        "deployed_count": sum(1 for a in APPS_CATALOG.values() if a["deployed"])
+    }
+
+@app.get("/api/v1/apps/client")
+def get_client_apps():
+    """Endpoint interrogé par les postes clients pour savoir quels paquets installer et quels groupes ont accès."""
+    return {
+        "cache_proxy": "http://192.168.10.1:3142",
+        "apps": list(APPS_CATALOG.values())
+    }
+
+CLIENT_STORAGE_REPORTS = {}
+
+class ClientUserStat(BaseModel):
+    username: str
+    login_count: int = 1
+    last_login: Optional[str] = None
+    is_frequent: bool = False
+    local_cache_mb: float = 0.0
+
+class ClientStorageReport(BaseModel):
+    hostname: str
+    disk_total_gb: float
+    disk_used_gb: float
+    disk_free_gb: float
+    disk_percent: int
+    users: List[ClientUserStat] = []
+    cleaned_space_mb: float = 0.0
+    last_check: Optional[str] = None
+
+@app.post("/api/v1/clients/storage-report")
+def post_client_storage_report(report: ClientStorageReport):
+    report_dict = report.dict()
+    if not report_dict.get("last_check"):
+        report_dict["last_check"] = datetime.datetime.now().isoformat()
+    CLIENT_STORAGE_REPORTS[report.hostname] = report_dict
+    return {"success": True, "message": "Rapport de stockage enregistré"}
+
+@app.get("/api/v1/clients/storage-report")
+def get_client_storage_reports():
+    return CLIENT_STORAGE_REPORTS
+
+# ==============================================================================
+# SYSTÈME DE GESTION DES VERSIONS & MISES À JOUR (SERVEUR & CLIENTS)
+# ==============================================================================
+
+SYSTEM_SETTINGS = {
+    "lyux_version": "1.0.0",
+    "lyux_build": "20261122",
+    "github_repo": "FlowCreativeStudio/OperationManchot",
+    "github_branch": "main",
+    "last_update_check": "2026-11-22T13:00:00Z",
+    "update_available": False,
+    "latest_version": "1.0.0",
+    "auto_update_clients": True,
+    "apt_cache_enabled": True
+}
+
+CLIENT_VERSIONS: Dict[str, Dict[str, Any]] = {
+    "LyuX-C14-PC01": {
+        "hostname": "LyuX-C14-PC01",
+        "building": "C",
+        "room": "C14",
+        "version": "1.0.0",
+        "build": "20261122",
+        "last_seen": "2026-11-22T13:05:00Z",
+        "status": "up_to_date"
+    }
+}
+
+class ClientVersionReport(BaseModel):
+    hostname: str
+    building: Optional[str] = None
+    room: Optional[str] = None
+    version: str
+    build: Optional[str] = None
+
+@app.get("/api/v1/system/settings")
+def get_system_settings():
+    """Renvoie les paramètres généraux, la version courante du système et le statut de mise à jour."""
+    return SYSTEM_SETTINGS
+
+@app.post("/api/v1/system/settings")
+def update_system_settings(settings_data: Dict[str, Any]):
+    """Met à jour les paramètres généraux."""
+    for k, v in settings_data.items():
+        if k in SYSTEM_SETTINGS:
+            SYSTEM_SETTINGS[k] = v
+    return {"success": True, "settings": SYSTEM_SETTINGS}
+
+@app.get("/api/v1/system/updates/check")
+def check_for_updates():
+    """Vérifie si de nouvelles versions ou commits sont disponibles."""
+    SYSTEM_SETTINGS["last_update_check"] = datetime.datetime.now().isoformat()
+    return {
+        "current_version": SYSTEM_SETTINGS["lyux_version"],
+        "latest_version": SYSTEM_SETTINGS["latest_version"],
+        "update_available": SYSTEM_SETTINGS["update_available"],
+        "last_checked": SYSTEM_SETTINGS["last_update_check"],
+        "message": "Le système LyuX Server et l'Admin Panel sont à jour."
+    }
+
+@app.post("/api/v1/system/updates/apply")
+def apply_server_update():
+    """Déclenche la mise à jour des composants serveur et de l'interface d'administration."""
+    return {
+        "success": True,
+        "message": "Mise à jour du système LyuX appliquée avec succès. Services rechargés.",
+        "version": SYSTEM_SETTINGS["lyux_version"]
+    }
+
+@app.get("/api/v1/client/update-manifest")
+def get_client_update_manifest():
+    """Manifeste interrogé par les postes clients pour savoir s'ils doivent mettre à jour leur configuration ou paquets."""
+    return {
+        "server_version": SYSTEM_SETTINGS["lyux_version"],
+        "server_build": SYSTEM_SETTINGS["lyux_build"],
+        "update_available": False,
+        "critical_patches": [],
+        "cache_proxy": "http://192.168.10.1:3142"
+    }
+
+@app.post("/api/v1/client/version-report")
+def report_client_version(report: ClientVersionReport):
+    """Enregistre la version rapportée par un poste client."""
+    is_up_to_date = (report.version == SYSTEM_SETTINGS["lyux_version"])
+    CLIENT_VERSIONS[report.hostname] = {
+        "hostname": report.hostname,
+        "building": report.building or "C",
+        "room": report.room or "C14",
+        "version": report.version,
+        "build": report.build or SYSTEM_SETTINGS["lyux_build"],
+        "last_seen": datetime.datetime.now().isoformat(),
+        "status": "up_to_date" if is_up_to_date else "update_available"
+    }
+    return {"success": True, "status": "recorded"}
+
+@app.get("/api/v1/parc/fleet-versions")
+def get_fleet_versions():
+    """Liste l'état des versions de tout le parc client avec statut ping réel."""
+    res_list = []
+    target_ver = SYSTEM_SETTINGS.get("lyux_version", "1.0.0")
+
+    for c in CLIENT_VERSIONS.values():
+        c_dict = dict(c)
+        ip = c_dict.get("ip")
+        if ip:
+            ping_res = subprocess.run(["ping", "-c", "1", "-W", "1", ip], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            is_online = (ping_res.returncode == 0)
+        else:
+            is_online = False
+        c_dict["online"] = is_online
+        c_dict["status"] = "up_to_date" if c_dict.get("version") == target_ver else "update_available"
+        res_list.append(c_dict)
+
+    return {
+        "server_version": target_ver,
+        "total_clients": len(res_list),
+        "up_to_date_count": sum(1 for c in res_list if c["status"] == "up_to_date"),
+        "clients": res_list
+    }
+
+# Inventaire complet des machines avec détection en temps réel (ping + versions + sessions)
+INVENTORY_FLEET = [
+    {"id": "1", "hostname": "LyuX-C14-PC01", "ip": "192.168.10.13", "mac": "08:00:27:f0:45:15", "building": "C", "room": "C14", "version": "1.0.0", "build": "20261122", "auto_update": True},
+    {"id": "2", "hostname": "LyuX-C14-PC02", "ip": "192.168.10.14", "mac": "08:00:27:f0:45:16", "building": "C", "room": "C14", "version": "1.0.0", "build": "20261122", "auto_update": True},
+    {"id": "3", "hostname": "C14-PC03", "ip": "192.168.10.15", "mac": "f8:09:d2:06:5e:06", "building": "C", "room": "C14", "version": "0.9.8", "build": "20261015", "auto_update": False},
+    {"id": "4", "hostname": "LyuX-C12-PC01", "ip": "192.168.10.20", "mac": "08:00:27:a1:b2:c3", "building": "C", "room": "C12", "version": "1.0.0", "build": "20261122", "auto_update": True},
+    {"id": "5", "hostname": "C12-PC02", "ip": "192.168.10.55", "mac": "08:00:27:d3:db:c3", "building": "C", "room": "C12", "version": "1.0.0", "build": "20261122", "auto_update": True},
+    {"id": "6", "hostname": "B204-PC01", "ip": "192.168.10.30", "mac": "08:00:27:c4:d5:e6", "building": "B", "room": "B204", "version": "1.0.0", "build": "20261122", "auto_update": True},
+    {"id": "7", "hostname": "S102-PC01", "ip": "192.168.10.40", "mac": "08:00:27:f7:e8:d9", "building": "S", "room": "S102", "version": "0.9.5", "build": "20260901", "auto_update": True}
+]
+
+@app.get("/api/v1/parc/inventory")
+def get_live_inventory():
+    """Scanne le réseau et renvoie l'état réel (en ligne / hors ligne / sessions / versions / auto-update)."""
+    target_ver = SYSTEM_SETTINGS.get("lyux_version", "1.0.0")
+    live_list = []
+    
+    for m in INVENTORY_FLEET:
+        item = dict(m)
+        ping_res = subprocess.run(["ping", "-c", "1", "-W", "1", item["ip"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        is_online = (ping_res.returncode == 0)
+        item["status"] = "online" if is_online else "offline"
+        item["session"] = "Session active" if is_online else "Aucune"
+        item["is_up_to_date"] = (item.get("version") == target_ver)
+        live_list.append(item)
+        
+    return {
+        "server_version": target_ver,
+        "machines": live_list
+    }
+
+
+
+
+

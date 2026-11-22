@@ -1,0 +1,22 @@
+{
+    "name": "discover",
+    "tools": {
+        "index": {
+            "label": "Discover",
+            "order": 5,
+            "docs": [
+                {
+                    "label": "Gestion des Logiciels du Parc LyuX",
+                    "url": "https://lyux.lan"
+                }
+            ],
+            "keywords": [
+                {
+                    "matches": ["discover", "apps", "logiciels", "store", "classes", "programmes", "install", "nsi", "sciences"]
+                }
+            ]
+        }
+    },
+    "preload": [ "index" ],
+    "content-security-policy": "default-src 'self' 'unsafe-inline' https: http:; img-src 'self' data: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; style-src 'self' 'unsafe-inline' https: http:; font-src 'self' data: https:; connect-src *"
+}

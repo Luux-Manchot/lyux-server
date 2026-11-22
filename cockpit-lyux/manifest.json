@@ -1,0 +1,19 @@
+{
+    "name": "lyux",
+    "requires": {
+        "cockpit": "200"
+    },
+    "menu": {
+        "index": {
+            "label": "🐧 LyuX Hub",
+            "order": 1,
+            "keywords": [
+                {
+                    "matches": ["lyux", "etablissement", "classes", "ecole", "salles", "eleves"]
+                }
+            ]
+        }
+    },
+    "preload": [ "index" ],
+    "content-security-policy": "default-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' data: https:"
+}

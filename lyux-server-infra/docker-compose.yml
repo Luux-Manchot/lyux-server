@@ -117,7 +117,7 @@ services:
 
   # --- Supervision Réseau & Machines (Uptime Kuma) ---
   supervision:
-    image: louislam/uptime-kuma:1
+    image: louislam/uptime-kuma:2
     container_name: lyux-supervision
     restart: unless-stopped
     volumes:
