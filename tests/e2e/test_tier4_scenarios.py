@@ -81,7 +81,7 @@ class TestTier4RealWorldScenarios:
             assert tool in tasks_content
 
         # 4. Vérification des droits d'accès partagés définis dans PROJECT.md
-        project_spec = (paths["root"] / "docs" / "PROJECT.md").read_text(encoding="utf-8")
+        project_spec = (paths["docs"] / "PROJECT.md").read_text(encoding="utf-8")
         assert "1G2_S102/Distribution" in project_spec
         assert "1G2_S102/Depot" in project_spec
 

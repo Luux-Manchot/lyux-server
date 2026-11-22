@@ -158,6 +158,7 @@ def preseed_vbox_path():
 def paths():
     return {
         "root": ROOT_DIR,
+        "docs": ROOT_DIR / ".github" / "docs",
         "tests_dir": ROOT_DIR / "lyux-server" / "tests",
         "server_infra": SERVER_INFRA_DIR,
         "ansible": ANSIBLE_DIR,

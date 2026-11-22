@@ -311,7 +311,7 @@ class TestFeature09_DiskQuotasEnforcement:
 
     def test_quota_contracts_values_in_project_spec(self, paths):
         """9.2 Vérifie la spécification des quotas : 5 Go élèves et 20 Go enseignants dans PROJECT.md"""
-        content = (paths["root"] / "docs" / "PROJECT.md").read_text(encoding="utf-8")
+        content = (paths["docs"] / "PROJECT.md").read_text(encoding="utf-8")
         assert "5 GB" in content or "5 Go" in content or "5G" in content
         assert "20 GB" in content or "20 Go" in content or "20G" in content
 
