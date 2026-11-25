@@ -1,0 +1,9 @@
+Origin: LyuX
+Label: LyuX Pilot APT
+Suite: trixie
+Codename: trixie
+Architectures: amd64 all
+Components: main
+SHA256:
+ c16393094b4e72c9e922448cabdbe9eabc0dd97eab00dfba4b53abeeea246afe 264 main/binary-amd64/Packages
+ aeac325492ce3d9f4975e8033ed5dc3d05fe3abdb752bd2e481582fc944a0353 210 main/binary-amd64/Packages.gz

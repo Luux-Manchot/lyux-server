@@ -19,19 +19,19 @@ import pytest
 import yaml
 
 
-class TestFeature01_CockpitWebAdmin:
-    def test_cockpit_port_contract_specification(self, expected_ports):
-        """1.1 Vérifie que Cockpit est assigné au port standard 9090 HTTPS"""
-        assert "cockpit" in expected_ports
-        assert expected_ports["cockpit"]["port"] == 9090
-        assert expected_ports["cockpit"]["transport"] == "https"
+class TestFeature01_AdminUIWeb:
+    def test_admin_ui_port_contract_specification(self, expected_ports):
+        """1.1 Vérifie que LyuX Admin UI est assigné au port 8087 HTTP"""
+        assert "admin_ui" in expected_ports
+        assert expected_ports["admin_ui"]["port"] == 8087
+        assert expected_ports["admin_ui"]["transport"] == "http"
 
-    def test_cockpit_firewall_rule_in_init_script(self, paths):
-        """1.2 Vérifie la règle pare-feu UFW pour le port Cockpit ou admin dans init-server.sh"""
+    def test_admin_ui_firewall_rule_in_init_script(self, paths):
+        """1.2 Vérifie la règle pare-feu UFW pour le port Admin UI 8087 dans init-server.sh"""
         init_script = paths["server_infra"] / "scripts" / "init-server.sh"
         content = init_script.read_text(encoding="utf-8")
         assert "ufw" in content
-        assert "9090" in content or "Cockpit" in content or "ufw default deny incoming" in content
+        assert "8087" in content
 
     def test_cockpit_system_packages_prerequisites(self, paths):
         """1.3 Vérifie la présence des outils d'administration système de base dans init-server.sh"""

@@ -1,0 +1,13 @@
+/*
+ * Shim CSS minimal pour lyux-hub.
+ * Les plugins embarquent deja leur propre CSS (PatternFly extrait dans
+ * cockpit-parc/parc.css ou styles locaux dans cockpit-discover).
+ * Sous Cockpit natif, c'est la vraie feuille ../base1/cockpit.css qui est chargee.
+ */
+:root {
+    color-scheme: light dark;
+}
+
+body {
+    margin: 0;
+}

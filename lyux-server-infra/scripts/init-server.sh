@@ -42,7 +42,8 @@ apt install -y \
     jq \
     python3 \
     python3-pip \
-    python3-ldap
+    python3-ldap \
+    dnsmasq
 
 # 3. Création des arborescences de stockage partagé
 echo "📁 3. Création des dossiers de stockage réseau..."
@@ -90,38 +91,52 @@ ufw allow 445/tcp comment 'Samba SMB'
 ufw allow 389/tcp comment 'LDAP'
 ufw allow 636/tcp comment 'LDAPS'
 ufw allow 3001/tcp comment 'Supervision Uptime Kuma'
-ufw allow 9090/tcp comment 'Cockpit Web Admin'
+ufw allow 8087/tcp comment 'LyuX Admin UI'
 ufw allow 8082/tcp comment 'LAM Web'
 ufw allow 8085/tcp comment 'GLPI Web'
 ufw allow 8000/tcp comment 'LyuX Control API'
 ufw --force enable
 
-# 7. Configuration et activation de Cockpit Web Admin (Port 9090)
-echo "🎛️ 7. Configuration et activation de Cockpit Web Admin..."
-mkdir -p /etc/cockpit
+# 6b. DHCP + DNS du réseau pédagogique interne (les clients récupèrent une IP
+#     et « serveur.lyux.lan » sans aucune configuration locale figée).
+echo "🌐 6b. DHCP/DNS du lab (dnsmasq)..."
+LAB_IF="${LYUX_LAB_IF:-enp0s3}"
+LAB_IP="${LYUX_LAB_IP:-192.168.10.1}"
+LAB_NET="${LYUX_LAB_NET:-192.168.10.0}"
+LAB_MASK="${LYUX_LAB_MASK:-255.255.255.0}"
+LAB_POOL_START="${LYUX_LAB_POOL_START:-192.168.10.100}"
+LAB_POOL_END="${LYUX_LAB_POOL_END:-192.168.10.200}"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="${SCRIPT_DIR}/../configs/cockpit"
-
-if [ -d "${CONFIG_DIR}" ]; then
-    if [ -f "${CONFIG_DIR}/cockpit.conf" ]; then
-        cp "${CONFIG_DIR}/cockpit.conf" /etc/cockpit/cockpit.conf
-        chmod 644 /etc/cockpit/cockpit.conf
-    fi
-    if [ -f "${CONFIG_DIR}/issue.cockpit" ]; then
-        cp "${CONFIG_DIR}/issue.cockpit" /etc/issue.cockpit
-        chmod 644 /etc/issue.cockpit
-    fi
+# Debian 13 commente conf-dir par défaut : on l'active pour charger notre fichier.
+if grep -q '^#conf-dir=/etc/dnsmasq.d' /etc/dnsmasq.conf; then
+    sed -i 's|^#conf-dir=/etc/dnsmasq.d,*.conf|conf-dir=/etc/dnsmasq.d,*.conf|' /etc/dnsmasq.conf
 fi
 
-# Activation idempotente du socket systemd
-if command -v systemctl >/dev/null 2>&1 && systemctl is-system-running >/dev/null 2>&1; then
-    systemctl enable --now cockpit.socket || true
-    echo "✅ cockpit.socket activé et démarré sur le port 9090."
-else
-    # Environnement sans systemd PID 1 (Docker / CI / Chroot)
-    systemctl enable cockpit.socket 2>/dev/null || true
-    echo "ℹ️ Activation systemctl enregistrée (démarrage du daemon différé si conteneur/chroot)."
+cat << EOF > /etc/dnsmasq.d/lyux-lab.conf
+# Réseau pédagogique LyuX — généré par init-server.sh
+interface=${LAB_IF}
+bind-interfaces
+domain=lyux.lan
+dhcp-range=${LAB_POOL_START},${LAB_POOL_END},${LAB_MASK},12h
+dhcp-option=3,${LAB_IP}
+dhcp-option=6,${LAB_IP}
+address=/serveur.lyux.lan/${LAB_IP}
+address=/server.lyux.lan/${LAB_IP}
+EOF
+
+# Le service doit répondre au DHCP (67/udp) et au DNS (53) sur l'interface du lab.
+ufw allow in on "${LAB_IF}" proto udp port 67 comment 'DHCP lab'
+ufw allow out on "${LAB_IF}" proto udp port 68 comment 'DHCP lab'
+ufw allow in on "${LAB_IF}" proto udp port 53 comment 'DNS lab'
+ufw allow in on "${LAB_IF}" proto tcp port 53 comment 'DNS lab'
+
+systemctl enable --now dnsmasq
+
+# 7. Désactivation de l'ancien port 9090 (Cockpit remplacé par LyuX Admin UI sur 8087)
+echo "🎛️ 7. Désactivation de l'ancien service Cockpit (remplacé par admin.lyux.lan:8087)..."
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl disable --now cockpit.socket 2>/dev/null || true
+    ufw delete allow 9090/tcp 2>/dev/null || true
 fi
 
 # 8. Initialisation automatisée des sondes Uptime Kuma

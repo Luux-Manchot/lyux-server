@@ -2,7 +2,7 @@
 # ==============================================================================
 # Script de configuration du stockage partagé (CIFS/NFS), des ACLs et des Quotas
 # Projet : Opération Manchot (LyuX) - Jalons M2 (Features 8 & 9)
-# Emplacement cible : projects/lyux-server-infra/scripts/setup-shares.sh
+# Emplacement cible : lyux-server-infra/scripts/setup-shares.sh
 # ==============================================================================
 set -euo pipefail
 

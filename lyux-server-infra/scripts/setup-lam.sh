@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Script de Déploiement du Profil LDAP Account Manager (LAM) LyuX
-# Emplacement cible : projects/lyux-server-infra/scripts/setup-lam.sh
+# Emplacement cible : lyux-server-infra/scripts/setup-lam.sh
 # ==============================================================================
 set -euo pipefail
 

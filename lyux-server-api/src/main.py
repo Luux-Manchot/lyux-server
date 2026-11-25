@@ -7,7 +7,7 @@ import random
 import string
 import datetime
 from typing import Optional, List, Dict, Any
-from fastapi import FastAPI, HTTPException, status, Request
+from fastapi import FastAPI, HTTPException, Header, status, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -156,6 +156,8 @@ class ClientEnrollRequest(BaseModel):
     mac_address: Optional[str] = ""
     ip_address: Optional[str] = ""
     role: Optional[str] = "eleve"
+    client_id: Optional[str] = ""
+    token: Optional[str] = ""
 
 SYSTEM_SETTINGS = {
     "enrollment_enabled": True
@@ -274,7 +276,7 @@ class ResetPasswordRequest(BaseModel):
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "project": "LyuX Control API", "version": settings.VERSION}
+    return {"status": "ok", "project": "LyuX Control API", "version": settings.VERSION, "api_version": "1"}
 
 
 @app.get("/api/v1/classes")
@@ -324,24 +326,38 @@ def add_subgroup(req: AddSubgroupRequest):
     return {"success": True, "class_id": cid, "subgroups": cls["subgroups"]}
 
 @app.post("/api/v1/users/create")
-def create_user_endpoint(req: CreateUserRequest):
+def create_user_endpoint(req: CreateUserRequest, authorization: Optional[str] = Header(default=None)):
+    if authorization:
+        from admin_routes import _require_permission
+        _require_permission(authorization, "users.manage")
     uname = req.username.lower().strip()
     if any(u["username"] == uname for u in TEST_USERS):
         raise HTTPException(status_code=400, detail="Nom d'utilisateur déjà existant")
+    from admin_routes import _STATE
+    from rbac import build_user_rbac_view, ensure_rbac_state, normalize_user_roles
+    roles_catalog, matrix = ensure_rbac_state(_STATE)
+    valid_ids = {r["id"] for r in roles_catalog}
+    raw_roles = getattr(req, "roles", None)
+    user_roles = normalize_user_roles(raw_roles, req.role, valid_ids)
     new_user = {
         "username": uname,
         "display_name": f"{req.first_name.capitalize()} {req.last_name.upper()}",
-        "role": req.role,
+        "role": user_roles[0],
+        "roles": user_roles,
         "classe": req.classe or "Sans affectation",
         "subgroup": req.subgroup or "-",
         "password": f"Pass{random.randint(1000, 9999)}!",
         "room": "B204",
-        "app": "Thonny IDE" if req.role == "eleve" else "Veyon Master"
+        "app": "Thonny IDE" if "eleve" in user_roles and len(user_roles) == 1 else "Veyon Master"
     }
+    view = build_user_rbac_view(new_user, roles_catalog, matrix)
+    new_user["role"] = view["effective_role"]
     TEST_USERS.append(new_user)
-    if req.classe and req.classe.upper() in CLASSES_CATALOG and req.role == "eleve":
+    if req.classe and req.classe.upper() in CLASSES_CATALOG and new_user["role"] == "eleve":
         CLASSES_CATALOG[req.classe.upper()]["students_count"] += 1
-    return {"success": True, "user": new_user}
+    from sessions import ensure_nas_user_home
+    ensure_nas_user_home(uname, new_user["password"])
+    return {"success": True, "user": {**new_user, **view}}
 
 @app.post("/api/v1/users/import-csv")
 def import_csv_endpoint(req: CsvImportRequest):
@@ -632,6 +648,43 @@ def check_hostname(req: Dict[str, Any]):
     exists = any(m["hostname"].upper() == h_clean.upper() for m in ENROLLED_MACHINES.values())
     return {"hostname": h_clean, "available": not exists}
 
+def _sign_enrollment_payload(payload: Dict[str, Any]) -> str:
+    import hashlib, hmac, json, os
+    secret = os.getenv("LYUX_AUTH_SECRET", "lyux-dev-secret-change-in-production").encode("utf-8")
+    raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    return hmac.new(secret, raw, hashlib.sha256).hexdigest()
+
+
+@app.get("/api/v1/enroll/roles")
+def list_enroll_roles():
+    return [
+        {"id": "eleve", "name": "Poste Élève standard (Kiosk sécurisé + Veyon Client)"},
+        {"id": "prof", "name": "Poste Enseignant Principal (Veyon Master + Gestion)"},
+    ]
+
+
+@app.get("/api/v1/enroll/status/{client_id}")
+def get_enrollment_status(client_id: str):
+    cid = client_id.strip()
+    for m in ENROLLED_MACHINES.values():
+        if cid and m.get("client_id") == cid:
+            room_id = m.get("room_id") or m.get("room", "")
+            room_profile = ROOM_CATALOG.get(room_id, {}).get("profile", "standard")
+            profile = {
+                "id": room_profile,
+                "room_id": room_id,
+                "building_id": m.get("building_id", ""),
+                "role": m.get("role", "eleve"),
+            }
+            return {
+                "enrolled": True,
+                "machine": m,
+                "profile": profile,
+                "signature": _sign_enrollment_payload({"client_id": cid, "hostname": m["hostname"], "profile": profile}),
+            }
+    return {"enrolled": False}
+
+
 @app.post("/api/v1/enroll/client-enroll")
 def client_enroll(req: ClientEnrollRequest):
     if not SYSTEM_SETTINGS.get("enrollment_enabled", False):
@@ -639,48 +692,134 @@ def client_enroll(req: ClientEnrollRequest):
             status_code=403,
             detail="L'enregistrement de nouveaux PC est actuellement désactivé par l'administrateur dans les paramètres généraux."
         )
+
+    b_clean = req.building_id.strip()
+    r_clean = req.room_id.strip()
+    role_clean = (req.role or "eleve").strip()
+    cid_clean = (req.client_id or "").strip()
+    mac_clean = (req.mac_address or "").strip().lower()
     h_clean = req.hostname.strip()
+
+    if b_clean not in BUILDINGS_CATALOG:
+        raise HTTPException(status_code=400, detail=f"Bâtiment inconnu dans le catalogue serveur : '{b_clean}'.")
+    if r_clean not in ROOM_CATALOG:
+        raise HTTPException(status_code=400, detail=f"Salle inconnue dans le catalogue serveur : '{r_clean}'.")
+    room_info = ROOM_CATALOG[r_clean]
+    if room_info.get("building_id") != b_clean:
+        raise HTTPException(status_code=400, detail=f"La salle '{r_clean}' n'appartient pas au bâtiment '{b_clean}'.")
+    if role_clean not in ("eleve", "prof"):
+        raise HTTPException(status_code=400, detail=f"Rôle invalide : '{role_clean}'.")
+
+    # Idempotence : reconnaître un poste déjà enrôlé via client_id ou mac_address stable
+    for existing in ENROLLED_MACHINES.values():
+        same_cid = cid_clean and existing.get("client_id") == cid_clean
+        same_mac = mac_clean and existing.get("mac", "").lower() == mac_clean
+        if same_cid or same_mac:
+            room_id = existing.get("room_id") or existing.get("room", r_clean)
+            room_profile = ROOM_CATALOG.get(room_id, {}).get("profile", "standard")
+            profile = {
+                "id": room_profile,
+                "room_id": room_id,
+                "building_id": existing.get("building_id", b_clean),
+                "role": existing.get("role", role_clean),
+            }
+            return {
+                "success": True,
+                "idempotent": True,
+                "status": "enrolled",
+                "machine": existing,
+                "profile": profile,
+                "signature": _sign_enrollment_payload({"client_id": cid_clean, "hostname": existing["hostname"], "profile": profile}),
+                "message": f"Poste {existing['hostname']} déjà enrôlé (reprise idempotente).",
+            }
+
     if any(m["hostname"].upper() == h_clean.upper() for m in ENROLLED_MACHINES.values()):
         raise HTTPException(
             status_code=400,
             detail=f"Le nom d'ordinateur '{h_clean}' est déjà attribué à une autre machine."
         )
-    
-    b_id = req.building_id
-    if req.room_id in ROOM_CATALOG:
-        b_id = ROOM_CATALOG[req.room_id].get("building_id", b_id)
-        
+
     new_machine = {
+        "client_id": cid_clean,
         "hostname": h_clean,
-        "room": req.room_id,
-        "room_id": req.room_id,
-        "building_id": b_id,
+        "room": r_clean,
+        "room_id": r_clean,
+        "building_id": b_clean,
         "ip": req.ip_address or "192.168.10.x",
         "mac": req.mac_address or "Non renseignée",
         "user": "Session Libre",
-        "role": req.role or "eleve",
+        "role": role_clean,
         "locked": False,
         "status": "online",
         "enrolled_at": datetime.datetime.now().isoformat()
     }
     ENROLLED_MACHINES[h_clean] = new_machine
-    return {"success": True, "machine": new_machine, "message": f"Poste {h_clean} enrôlé avec succès !"}
+    profile = {
+        "id": room_info.get("profile", "standard"),
+        "room_id": r_clean,
+        "building_id": b_clean,
+        "role": role_clean,
+    }
+    return {
+        "success": True,
+        "idempotent": False,
+        "status": "enrolled",
+        "machine": new_machine,
+        "profile": profile,
+        "signature": _sign_enrollment_payload({"client_id": cid_clean, "hostname": h_clean, "profile": profile}),
+        "message": f"Poste {h_clean} enrôlé avec succès !",
+    }
 
 @app.get("/api/v1/users")
-def list_test_users():
-    return TEST_USERS
+def list_test_users(authorization: Optional[str] = Header(default=None)):
+    from admin_routes import _STATE, _require_permission
+    from rbac import build_user_rbac_view, ensure_rbac_state
+    if authorization:
+        _require_permission(authorization, "users.view")
+    roles_catalog, matrix = ensure_rbac_state(_STATE)
+    result = []
+    for u in TEST_USERS:
+        view = build_user_rbac_view(u, roles_catalog, matrix)
+        result.append({
+            **u,
+            **view,
+        })
+    return result
 
 @app.post("/api/v1/control/lock-room")
-def lock_room_control(req: LockRoomRequest):
+def lock_room_control(req: LockRoomRequest, authorization: Optional[str] = Header(default=None)):
+    if authorization:
+        from admin_routes import _require_permission
+        _require_permission(authorization, "parc.room_lock")
     count = 0
     for m in ENROLLED_MACHINES.values():
-        if m["room"] == req.room_id and m["role"] == "eleve":
+        if req.room_id == "*" or (m.get("room") == req.room_id and m.get("role") == "eleve"):
             if req.action == "lock":
                 m["locked"] = True
             elif req.action == "unlock":
                 m["locked"] = False
             count += 1
     return {"success": True, "action": req.action, "affected_machines": count, "message": req.message_text}
+
+
+@app.post("/api/v1/control/unlock-all")
+def unlock_all_machines(authorization: Optional[str] = Header(default=None)):
+    from admin_routes import _require_permission
+    actor = _require_permission(authorization, "parc.room_lock")["username"]
+    count = 0
+    for m in ENROLLED_MACHINES.values():
+        m["locked"] = False
+        count += 1
+    for m in INVENTORY_FLEET:
+        m["locked"] = False
+        count += 1
+    return {
+        "success": True,
+        "action": "unlock",
+        "actor": actor,
+        "affected_machines": count,
+        "message": f"Déverrouillage Veyon envoyé à {count} poste(s) par {actor}.",
+    }
 
 @app.post("/api/v1/control/reset-password")
 def reset_password(req: ResetPasswordRequest):
@@ -803,17 +942,17 @@ d-i finish-install/reboot_in_progress note
 @app.get("/", response_class=HTMLResponse)
 def root_redirect(request: Request):
     """
-    Redirection automatique vers l'interface unifiée Cockpit LyuX Hub (Port 9090)
+    Redirection automatique vers l'interface unique LyuX Administration (Port 8087 / admin.lyux.lan)
     """
     host = request.headers.get("host", "localhost").split(":")[0]
-    cockpit_url = f"https://{host}:9090/@localhost/lyux"
+    admin_url = "http://admin.lyux.lan" if host == "api.lyux.lan" else f"http://{host}:8087/"
     html = f"""<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url={cockpit_url}">
-    <title>Redirection vers LyuX Hub</title>
-    <script>window.location.href = "{cockpit_url}";</script>
+    <meta http-equiv="refresh" content="0; url={admin_url}">
+    <title>Redirection vers LyuX Administration</title>
+    <script>window.location.href = "{admin_url}";</script>
     <style>
         body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0b0f19; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }}
         .card {{ background: #1e293b; padding: 2.5rem; border-radius: 1rem; border: 1px solid #334155; text-align: center; max-width: 480px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }}
@@ -825,9 +964,9 @@ def root_redirect(request: Request):
 </head>
 <body>
     <div class="card">
-        <h1>🐧 LyuX OS Hub</h1>
-        <p>L'interface d'administration centralisée est désormais intégrée à Cockpit Appliance sur le port <strong>9090</strong>.</p>
-        <a href="{cockpit_url}">Accéder à LyuX Hub (Port 9090) &rarr;</a>
+        <h1>🐧 LyuX Administration</h1>
+        <p>L'interface d'administration centralisée est accessible sur <strong>admin.lyux.lan</strong> (port <strong>8087</strong>).</p>
+        <a href="{admin_url}">Accéder à LyuX Administration (Port 8087) &rarr;</a>
     </div>
 </body>
 </html>"""
@@ -1067,6 +1206,7 @@ def get_client_storage_reports():
 # ==============================================================================
 
 SYSTEM_SETTINGS = {
+    "enrollment_enabled": True,
     "lyux_version": "1.0.0",
     "lyux_build": "20261122",
     "github_repo": "FlowCreativeStudio/OperationManchot",
@@ -1131,15 +1271,126 @@ def apply_server_update():
         "version": SYSTEM_SETTINGS["lyux_version"]
     }
 
+from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse, RedirectResponse, Response
+from release_registry import ReleaseRegistry
+from apt_repo import SignedAptRepository
+
+RELEASE_REGISTRY = ReleaseRegistry()
+APT_REPOSITORY = SignedAptRepository(key_manager=RELEASE_REGISTRY.key_manager)
+CLIENT_PROFILE_REPORTS: Dict[str, Dict[str, Any]] = {}
+
+
+class ClientProfileReportRequest(BaseModel):
+    client_id: str
+    hostname: str
+    profile_id: str
+    profile_version: str
+    state: str
+    installed_packages: Dict[str, str] = {}
+    error: Optional[str] = ""
+
+
+@app.post("/api/v1/client/profile-report")
+def post_client_profile_report(req: ClientProfileReportRequest):
+    record = req.dict()
+    record["reported_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+    CLIENT_PROFILE_REPORTS[req.client_id or req.hostname] = record
+    return {"success": True, "report": record}
+
+
+@app.get("/api/v1/client/profile-report")
+def list_client_profile_reports():
+    return list(CLIENT_PROFILE_REPORTS.values())
+
+
+@app.get("/api/v1/apt-repo/dists/trixie/Release")
+def apt_repo_release():
+    p = APT_REPOSITORY.repo_dir / "dists" / "trixie" / "Release"
+    return PlainTextResponse(p.read_text(encoding="utf-8"))
+
+
+@app.get("/api/v1/apt-repo/dists/trixie/Release.ed25519")
+def apt_repo_release_sig():
+    p = APT_REPOSITORY.repo_dir / "dists" / "trixie" / "Release.ed25519"
+    return Response(content=p.read_bytes(), media_type="application/json")
+
+
+@app.get("/api/v1/apt-repo/dists/trixie/main/binary-amd64/Packages")
+def apt_repo_packages():
+    p = APT_REPOSITORY.repo_dir / "dists" / "trixie" / "main" / "binary-amd64" / "Packages"
+    return PlainTextResponse(p.read_text(encoding="utf-8"))
+
+
+@app.get("/api/v1/apt-repo/dists/trixie/main/binary-amd64/Packages.gz")
+def apt_repo_packages_gz():
+    p = APT_REPOSITORY.repo_dir / "dists" / "trixie" / "main" / "binary-amd64" / "Packages.gz"
+    return Response(content=p.read_bytes(), media_type="application/gzip")
+
+
+@app.get("/api/v1/apt-repo/pool/main/{filename}")
+def apt_repo_pool_deb(filename: str):
+    safe = Path(filename).name
+    p = APT_REPOSITORY.repo_dir / "pool" / "main" / safe
+    if not p.exists() or not safe.endswith(".deb"):
+        raise HTTPException(status_code=404, detail="Paquet introuvable dans le dépôt pilote.")
+    return Response(content=p.read_bytes(), media_type="application/vnd.debian.binary-package")
+
+
+@app.get("/api/v1/client/public-keys")
+def get_client_public_keys():
+    """Retourne uniquement les clés publiques Ed25519 (jamais de clé privée)."""
+    return RELEASE_REGISTRY.key_manager.get_public_bundle()
+
+
+@app.get("/api/v1/client/profile-manifest")
+def get_client_profile_manifest(
+    client_id: str,
+    hostname: str,
+    building_id: str,
+    room_id: str,
+    role: str = "eleve",
+    schema_version: int = 1,
+    client_version: str = "1.0.0",
+    current_hash: str = "",
+):
+    """Retourne le manifeste de profil signé Ed25519 pour un poste enrôlé et autorisé."""
+    if schema_version != 1:
+        raise HTTPException(status_code=400, detail=f"schema_version non supportée : {schema_version}")
+
+    matched = None
+    for m in ENROLLED_MACHINES.values():
+        if (client_id and m.get("client_id") == client_id) or m.get("hostname", "").lower() == hostname.strip().lower():
+            matched = m
+            break
+    if not matched:
+        raise HTTPException(status_code=403, detail="Poste non enrôlé ou non autorisé.")
+    if matched.get("building_id") != building_id or (matched.get("room_id") or matched.get("room")) != room_id:
+        raise HTTPException(status_code=403, detail="Portée bâtiment/salle refusée pour ce poste.")
+
+    room_profile = ROOM_CATALOG.get(room_id, {}).get("profile", "standard")
+    ok, payload = RELEASE_REGISTRY.build_client_manifest_response(
+        building_id=building_id,
+        room_id=room_id,
+        role=role,
+        profile_id=room_profile,
+        current_hash=current_hash,
+    )
+    if not ok:
+        raise HTTPException(status_code=404, detail=payload.get("detail", "Manifeste indisponible"))
+    return payload
+
+
 @app.get("/api/v1/client/update-manifest")
 def get_client_update_manifest():
-    """Manifeste interrogé par les postes clients pour savoir s'ils doivent mettre à jour leur configuration ou paquets."""
+    """Compatibilité temporaire : renvoie la version publiée courante."""
+    reg = RELEASE_REGISTRY.list_releases()
+    pub = next((r for r in reg["releases"] if r.get("state") == "published"), None)
     return {
-        "server_version": SYSTEM_SETTINGS["lyux_version"],
-        "server_build": SYSTEM_SETTINGS["lyux_build"],
+        "server_version": pub["version"] if pub else SYSTEM_SETTINGS["lyux_version"],
+        "server_build": pub["build"] if pub else SYSTEM_SETTINGS["lyux_build"],
         "update_available": False,
         "critical_patches": [],
-        "cache_proxy": "http://192.168.10.1:3142"
+        "cache_proxy": "",
     }
 
 @app.post("/api/v1/client/version-report")
@@ -1212,6 +1463,11 @@ def get_live_inventory():
         "server_version": target_ver,
         "machines": live_list
     }
+
+
+from admin_routes import router as admin_router
+app.include_router(admin_router)
+
 
 
 

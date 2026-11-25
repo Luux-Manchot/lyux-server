@@ -1,6 +1,6 @@
 # ==============================================================================
 # Arborescence DIT (Directory Information Tree) Standard LyuX (Opération Manchot)
-# Emplacement cible : projects/lyux-server-infra/configs/samba/init-dit.ldif
+# Emplacement cible : lyux-server-infra/configs/samba/init-dit.ldif
 # Application : ldbmodify -H /var/lib/samba/private/sam.ldb init-dit.ldif
 # ou via samba-tool / ldapadd
 # ==============================================================================

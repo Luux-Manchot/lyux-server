@@ -21,7 +21,7 @@ DEFAULT_DB_LOCATIONS = [
     "/app/data/kuma.db",  # Inside Uptime Kuma container
     "data/uptime-kuma/kuma.db",  # Relative to lyux-server-infra
     "lyux-server/lyux-server-infra/data/uptime-kuma/kuma.db",
-    "projects/lyux-server-infra/data/uptime-kuma/kuma.db",
+    "lyux-server-infra/data/uptime-kuma/kuma.db",
 ]
 
 TARGET_HOST = os.environ.get("LYUX_HOST", "host.docker.internal")
@@ -31,17 +31,17 @@ DOMAIN = os.environ.get("LYUX_DOMAIN", "lyux.lan")
 # Définition des sondes officielles Opération Manchot (LyuX)
 OFFICIAL_MONITORS = [
     {
-        "name": "Cockpit Web Admin",
+        "name": "LyuX Admin UI",
         "type": "http",
-        "url": f"https://{TARGET_HOST}:9090",
+        "url": f"http://{TARGET_HOST}:8087",
         "hostname": None,
         "port": None,
         "interval": 60,
         "retry_interval": 10,
         "maxretries": 2,
-        "ignore_tls": 1,  # Cockpit utilise un certificat auto-signé par défaut
+        "ignore_tls": 0,
         "accepted_statuscodes_json": json.dumps(["200-299"]),
-        "description": "Interface d'administration système officielle Cockpit Project (HTTPS 9090)"
+        "description": "Interface unique d'administration LyuX (HTTP 8087)"
     },
     {
         "name": "LyuX Control API",

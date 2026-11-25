@@ -14,3 +14,11 @@ data/uptime-kuma/*.db
 
 # Build artifacts (ISO serveur)
 build/
+
+# Assets générés (ne jamais versionner)
+*.css.gz
+*.js.gz
+
+# Prototype React (dépendances et build)
+node_modules/
+dist/

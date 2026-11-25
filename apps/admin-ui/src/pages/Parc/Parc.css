@@ -1,0 +1,27 @@
+.building-selector { display: flex; align-items: center; gap: 12px; padding: 10px 14px; flex-wrap: wrap; }
+.building-selector-label { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
+.building-pills { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; }
+.building-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text-muted); font-size: 11px; font-weight: 600; cursor: pointer; }
+.building-pill span { display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: var(--radius-sm); background: var(--surface-3); font-size: 9.5px; }
+.building-pill.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+.building-pill.active span { background: rgba(255, 255, 255, .22); color: #fff; }
+.back-link { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 12px; padding: 0; border: 0; background: none; color: var(--brand); font-size: 11.5px; font-weight: 650; }
+.back-link:hover { text-decoration: underline; }
+.subheading { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--text-muted); margin-bottom: 10px; }
+.subheading.with-icon { display: flex; align-items: center; gap: 6px; }
+.room-layout { display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start; }
+.pc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 8px; }
+.pc-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); text-align: center; cursor: pointer; }
+.pc-tile:hover { border-color: var(--border-strong); background: var(--surface-2); }
+.pc-tile.selected { border-color: var(--brand); background: var(--brand-soft); }
+.pc-status { color: var(--text-subtle); }
+.pc-status.online { color: var(--success); }
+.pc-tile strong { font-size: 11px; word-break: break-all; }
+.pc-tile small { color: var(--text-subtle); font-size: 9.5px; font-family: monospace; }
+.pc-detail { padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.detail-actions { flex-direction: column; margin-top: 14px; }
+.detail-actions .btn { width: 100%; }
+
+@media (max-width: 760px) {
+  .room-layout { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,647 @@
+{
+  "setup": {
+    "configured": true,
+    "school_name": "Lycée Jean Moulin",
+    "uai_code": "0690001A",
+    "academy": "Lyon",
+    "school_year": "2026 – 2027",
+    "domain": "lyux.lan",
+    "admin_email": "contact@flowcrea.fr",
+    "timezone": "Europe/Paris",
+    "network": {
+      "server_ip": "192.168.10.1",
+      "subnet": "192.168.10.0/24",
+      "gateway": "192.168.10.254",
+      "dns": "192.168.10.1"
+    },
+    "modules": {
+      "samba_ad": true,
+      "glpi": true,
+      "uptime_kuma": true,
+      "apt_cache": true,
+      "veyon": true,
+      "sso": false
+    },
+    "enrollment_enabled": true,
+    "auto_update": true,
+    "update_window": "22:00 – 05:00",
+    "default_profiles": [
+      "standard",
+      "nsi",
+      "sciences",
+      "multimedia"
+    ],
+    "updated_at": "2026-11-25T21:14:18"
+  },
+  "roles": [
+    {
+      "id": "admin",
+      "name": "Administrateur",
+      "description": "Accès complet au serveur et aux outils système",
+      "priority": 100,
+      "system": true
+    },
+    {
+      "id": "technicien",
+      "name": "Technicien",
+      "description": "Maintenance du parc, postes, dépôts, profils globaux et diagnostic technique",
+      "priority": 85,
+      "system": true
+    },
+    {
+      "id": "direction",
+      "name": "Direction",
+      "description": "Pilotage pédagogique et rapports consolidés",
+      "priority": 70,
+      "system": true
+    },
+    {
+      "id": "viesco",
+      "name": "Vie scolaire",
+      "description": "Suivi des élèves et des inscriptions",
+      "priority": 55,
+      "system": true
+    },
+    {
+      "id": "enseignant",
+      "name": "Enseignant",
+      "description": "Classes, partages pédagogiques et logiciels",
+      "priority": 40,
+      "system": true
+    },
+    {
+      "id": "eleve",
+      "name": "Élève",
+      "description": "Poste personnel et ressources de sa classe",
+      "priority": 10,
+      "system": true
+    }
+  ],
+  "permission_matrix": [
+    {
+      "key": "dashboard.view",
+      "feature": "Tableau de bord & indicateurs",
+      "admin": true,
+      "technicien": true,
+      "direction": true,
+      "viesco": true,
+      "enseignant": true,
+      "eleve": true
+    },
+    {
+      "key": "parc.view",
+      "feature": "Consulter le parc, bâtiments et salles",
+      "admin": true,
+      "technicien": true,
+      "direction": true,
+      "viesco": true,
+      "enseignant": true,
+      "eleve": false
+    },
+    {
+      "key": "parc.manage",
+      "feature": "Gérer bâtiments, salles, postes et Wake-on-LAN",
+      "admin": true,
+      "technicien": true,
+      "direction": false,
+      "viesco": false,
+      "enseignant": false,
+      "eleve": false
+    },
+    {
+      "key": "parc.room_lock",
+      "feature": "Verrouiller / piloter une séance en salle",
+      "admin": true,
+      "technicien": true,
+      "direction": false,
+      "viesco": true,
+      "enseignant": true,
+      "eleve": false
+    },
+    {
+      "key": "apps.view",
+      "feature": "Consulter le catalogue d'applications",
+      "admin": true,
+      "technicien": true,
+      "direction": true,
+      "viesco": true,
+      "enseignant": true,
+      "eleve": true
+    },
+    {
+      "key": "apps.manage",
+      "feature": "Ajouter et déployer des applications",
+      "admin": true,
+      "technicien": true,
+      "direction": false,
+      "viesco": false,
+      "enseignant": false,
+      "eleve": false
+    },
+    {
+      "key": "profiles.view",
+      "feature": "Consulter les profils globaux lycée",
+      "admin": true,
+      "technicien": true,
+      "direction": true,
+      "viesco": true,
+      "enseignant": true,
+      "eleve": false
+    },
+    {
+      "key": "profiles.manage",
+      "feature": "Configurer et affecter les profils globaux",
+      "admin": true,
+      "technicien": true,
+      "direction": false,
+      "viesco": false,
+      "enseignant": false,
+      "eleve": false
+    },
+    {
+      "key": "releases.view",
+      "feature": "Consulter les versions OS et le dépôt APT",
+      "admin": true,
+      "technicien": true,
+      "direction": true,
+      "viesco": false,
+      "enseignant": false,
+      "eleve": false
+    },
+    {
+      "key": "releases.manage",
+      "feature": "Signer, publier et révoquer des releases OS",
+      "admin": true,
+      "technicien": true,
+      "direction": false,
+      "viesco": false,
+      "enseignant": false,
+      "eleve": false
+    },
+    {
+      "key": "users.view",
+      "feature": "Consulter les comptes et classes",
+      "admin": true,
+      "technicien": true,
+      "direction": true,
+      "viesco": true,
+      "enseignant": true,
+      "eleve": false
+    },
+    {
+      "key": "users.manage",
+      "feature": "Créer/modifier comptes, classes et mots de passe",
+      "admin": true,
+      "technicien": false,
+      "direction": false,
+      "viesco": true,
+      "enseignant": false,
+      "eleve": false
+    },
+    {
+      "key": "roles.view",
+      "feature": "Consulter les rôles et la matrice de permissions",
+      "admin": true,
+      "technicien": true,
+      "direction": true,
+      "viesco": false,
+      "enseignant": false,
+      "eleve": false
+    },
+    {
+      "key": "roles.manage",
+      "feature": "Créer des rôles et modifier les permissions",
+      "admin": true,
+      "technicien": false,
+      "direction": false,
+      "viesco": false,
+      "enseignant": false,
+      "eleve": false
+    },
+    {
+      "key": "setup.manage",
+      "feature": "Configurer l'établissement, les modules et le serveur",
+      "admin": true,
+      "technicien": true,
+      "direction": false,
+      "viesco": false,
+      "enseignant": false,
+      "eleve": false
+    },
+    {
+      "key": "cockpit.access",
+      "feature": "Accéder à la console système native (Cockpit)",
+      "admin": true,
+      "technicien": true,
+      "direction": false,
+      "viesco": false,
+      "enseignant": false,
+      "eleve": false
+    },
+    {
+      "key": "sessions.multi",
+      "feature": "Autoriser les sessions simultanées sur plusieurs postes",
+      "admin": true,
+      "technicien": true,
+      "direction": true,
+      "viesco": false,
+      "enseignant": true,
+      "eleve": false
+    }
+  ],
+  "releases": [
+    {
+      "id": "rel-1.0.0",
+      "version": "1.0.0",
+      "build": "20261122",
+      "channel": "stable",
+      "state": "published",
+      "signature": "Vérifiée",
+      "released_at": "2026-11-22",
+      "size": "1.42 Go",
+      "notes": "Version socle Debian 13 Trixie + KDE X11 + OOBE multi-établissements.",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "rel-0.9.8",
+      "version": "0.9.8",
+      "build": "20261015",
+      "channel": "archive",
+      "state": "archived",
+      "signature": "Vérifiée",
+      "released_at": "2026-10-15",
+      "size": "1.38 Go",
+      "notes": "Ancienne image de test salle C14.",
+      "sha256": "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4"
+    }
+  ],
+  "release_policy": {
+    "channel": "stable",
+    "auto_update": true,
+    "update_window": "22:00 – 05:00",
+    "require_signed": true,
+    "canary_room": "C14"
+  },
+  "rbac_schema": "lyux-rbac-matrix",
+  "rbac_schema_version": 1,
+  "profiles": {
+    "global-socle": {
+      "id": "global-socle",
+      "name": "Socle global lycée",
+      "description": "Configuration commune appliquée à tous les utilisateurs et postes du lycée",
+      "scope": "global",
+      "kiosk_locked": false,
+      "packages": [
+        "firefox-esr",
+        "libreoffice",
+        "vlc"
+      ],
+      "desktop_theme": "lyux-ocean"
+    },
+    "eleve": {
+      "id": "eleve",
+      "name": "Profil Élève",
+      "description": "Environnement élève standard avec restrictions Kiosk",
+      "scope": "role",
+      "kiosk_locked": true,
+      "packages": [
+        "thonny",
+        "geogebra"
+      ],
+      "desktop_theme": "lyux-ocean"
+    },
+    "enseignant": {
+      "id": "enseignant",
+      "name": "Profil Professeur",
+      "description": "Environnement pédagogique mobile avec Veyon Master et outils de classe",
+      "scope": "role",
+      "kiosk_locked": false,
+      "packages": [
+        "veyon",
+        "libreoffice",
+        "obs-studio"
+      ],
+      "desktop_theme": "lyux-ocean"
+    },
+    "technicien": {
+      "id": "technicien",
+      "name": "Profil Technicien",
+      "description": "Outils de diagnostic réseau, maintenance parc et console",
+      "scope": "role",
+      "kiosk_locked": false,
+      "packages": [
+        "wireshark",
+        "nmap",
+        "htop"
+      ],
+      "desktop_theme": "lyux-dark"
+    },
+    "nsi": {
+      "id": "nsi",
+      "name": "Spécialité NSI",
+      "description": "Environnement développement Python, C/C++, Web et Git",
+      "scope": "group",
+      "kiosk_locked": false,
+      "packages": [
+        "thonny",
+        "code",
+        "git",
+        "python3-pytest"
+      ],
+      "desktop_theme": "lyux-ocean"
+    },
+    "sciences": {
+      "id": "sciences",
+      "name": "Sciences & Labo",
+      "description": "Outils de physique-chimie, SVT et acquisition",
+      "scope": "group",
+      "kiosk_locked": false,
+      "packages": [
+        "stellarium",
+        "avogadro"
+      ],
+      "desktop_theme": "lyux-ocean"
+    },
+    "multimedia": {
+      "id": "multimedia",
+      "name": "Arts & Multimédia",
+      "description": "Création graphique, audio et montage vidéo",
+      "scope": "group",
+      "kiosk_locked": false,
+      "packages": [
+        "gimp",
+        "inkscape",
+        "audacity",
+        "kdenlive"
+      ],
+      "desktop_theme": "lyux-ocean"
+    },
+    "robotique": {
+      "id": "robotique",
+      "name": "Club Robotique",
+      "description": "Outils Arduino et Python",
+      "scope": "user",
+      "kiosk_locked": false,
+      "packages": [
+        "arduino",
+        "thonny"
+      ],
+      "desktop_theme": "lyux-ocean"
+    }
+  },
+  "profile_assignments": [
+    {
+      "target_type": "global",
+      "target_id": "*",
+      "profile_id": "global-socle"
+    },
+    {
+      "target_type": "role",
+      "target_id": "eleve",
+      "profile_id": "eleve"
+    },
+    {
+      "target_type": "role",
+      "target_id": "enseignant",
+      "profile_id": "enseignant"
+    },
+    {
+      "target_type": "role",
+      "target_id": "technicien",
+      "profile_id": "technicien"
+    },
+    {
+      "target_type": "group",
+      "target_id": "T-NSI",
+      "profile_id": "nsi"
+    },
+    {
+      "target_type": "group",
+      "target_id": "1-NSI",
+      "profile_id": "nsi"
+    },
+    {
+      "target_type": "user",
+      "target_id": "m.curie",
+      "profile_id": "robotique"
+    }
+  ],
+  "profile_audit_log": [
+    {
+      "timestamp": "2026-11-25T21:14:24",
+      "actor": "lyux-admin",
+      "action": "unassign_profile",
+      "profile_id": "eleve",
+      "detail": "Retiré de machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-25T21:14:24",
+      "actor": "lyux-admin",
+      "action": "reset_default",
+      "profile_id": "eleve",
+      "detail": "Restauration du profil LyuX par défaut"
+    },
+    {
+      "timestamp": "2026-11-25T21:14:24",
+      "actor": "lyux-admin",
+      "action": "pilot_apply",
+      "profile_id": "eleve",
+      "detail": "Pilote sur machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-25T21:14:24",
+      "actor": "lyux-admin",
+      "action": "assign_profile",
+      "profile_id": "robotique",
+      "detail": "Affecté à user:m.curie"
+    },
+    {
+      "timestamp": "2026-11-25T21:14:24",
+      "actor": "lyux-admin",
+      "action": "save_profile",
+      "profile_id": "robotique",
+      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
+    },
+    {
+      "timestamp": "2026-11-25T21:10:01",
+      "actor": "lyux-admin",
+      "action": "unassign_profile",
+      "profile_id": "eleve",
+      "detail": "Retiré de machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-25T21:10:00",
+      "actor": "lyux-admin",
+      "action": "reset_default",
+      "profile_id": "eleve",
+      "detail": "Restauration du profil LyuX par défaut"
+    },
+    {
+      "timestamp": "2026-11-25T21:10:00",
+      "actor": "lyux-admin",
+      "action": "pilot_apply",
+      "profile_id": "eleve",
+      "detail": "Pilote sur machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-25T21:10:00",
+      "actor": "lyux-admin",
+      "action": "assign_profile",
+      "profile_id": "robotique",
+      "detail": "Affecté à user:m.curie"
+    },
+    {
+      "timestamp": "2026-11-25T21:10:00",
+      "actor": "lyux-admin",
+      "action": "save_profile",
+      "profile_id": "robotique",
+      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
+    },
+    {
+      "timestamp": "2026-11-25T21:09:24",
+      "actor": "lyux-admin",
+      "action": "unassign_profile",
+      "profile_id": "eleve",
+      "detail": "Retiré de machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-25T21:09:24",
+      "actor": "lyux-admin",
+      "action": "reset_default",
+      "profile_id": "eleve",
+      "detail": "Restauration du profil LyuX par défaut"
+    },
+    {
+      "timestamp": "2026-11-25T21:09:24",
+      "actor": "lyux-admin",
+      "action": "pilot_apply",
+      "profile_id": "eleve",
+      "detail": "Pilote sur machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-25T21:09:24",
+      "actor": "lyux-admin",
+      "action": "assign_profile",
+      "profile_id": "robotique",
+      "detail": "Affecté à user:m.curie"
+    },
+    {
+      "timestamp": "2026-11-25T21:09:24",
+      "actor": "lyux-admin",
+      "action": "save_profile",
+      "profile_id": "robotique",
+      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
+    },
+    {
+      "timestamp": "2026-11-25T19:59:51",
+      "actor": "lyux-admin",
+      "action": "unassign_profile",
+      "profile_id": "eleve",
+      "detail": "Retiré de machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-25T19:59:51",
+      "actor": "lyux-admin",
+      "action": "reset_default",
+      "profile_id": "eleve",
+      "detail": "Restauration du profil LyuX par défaut"
+    },
+    {
+      "timestamp": "2026-11-25T19:59:51",
+      "actor": "lyux-admin",
+      "action": "pilot_apply",
+      "profile_id": "eleve",
+      "detail": "Pilote sur machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-25T19:59:51",
+      "actor": "lyux-admin",
+      "action": "assign_profile",
+      "profile_id": "robotique",
+      "detail": "Affecté à user:m.curie"
+    },
+    {
+      "timestamp": "2026-11-25T19:59:51",
+      "actor": "lyux-admin",
+      "action": "save_profile",
+      "profile_id": "robotique",
+      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
+    },
+    {
+      "timestamp": "2026-11-25T19:59:17",
+      "actor": "lyux-admin",
+      "action": "unassign_profile",
+      "profile_id": "eleve",
+      "detail": "Retiré de machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-25T19:59:17",
+      "actor": "lyux-admin",
+      "action": "reset_default",
+      "profile_id": "eleve",
+      "detail": "Restauration du profil LyuX par défaut"
+    },
+    {
+      "timestamp": "2026-11-25T19:59:17",
+      "actor": "lyux-admin",
+      "action": "pilot_apply",
+      "profile_id": "eleve",
+      "detail": "Pilote sur machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-25T19:59:16",
+      "actor": "lyux-admin",
+      "action": "assign_profile",
+      "profile_id": "robotique",
+      "detail": "Affecté à user:m.curie"
+    },
+    {
+      "timestamp": "2026-11-25T19:59:16",
+      "actor": "lyux-admin",
+      "action": "save_profile",
+      "profile_id": "robotique",
+      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
+    },
+    {
+      "timestamp": "2026-11-25T19:56:13",
+      "actor": "lyux-admin",
+      "action": "reset_default",
+      "profile_id": "eleve",
+      "detail": "Restauration du profil LyuX par défaut"
+    },
+    {
+      "timestamp": "2026-11-25T19:56:13",
+      "actor": "lyux-admin",
+      "action": "pilot_apply",
+      "profile_id": "eleve",
+      "detail": "Pilote sur machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-25T19:56:13",
+      "actor": "lyux-admin",
+      "action": "assign_profile",
+      "profile_id": "robotique",
+      "detail": "Affecté à user:m.curie"
+    },
+    {
+      "timestamp": "2026-11-25T19:56:13",
+      "actor": "lyux-admin",
+      "action": "save_profile",
+      "profile_id": "robotique",
+      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
+    }
+  ],
+  "active_sessions": {},
+  "session_sync": {
+    "l.martin": {
+      "last_machine": "PC-1G2-01",
+      "last_sync_at": "2026-11-25T21:14:24",
+      "files_synced": 0
+    },
+    "p.curie": {
+      "last_machine": "PC-B204-00",
+      "last_sync_at": "2026-11-25T21:14:24",
+      "files_synced": 0
+    }
+  }
+}

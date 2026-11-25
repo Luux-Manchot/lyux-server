@@ -1,6 +1,6 @@
 # ==============================================================================
 # Modèle d'exports NFS pour Serveur Central LyuX (Opération Manchot)
-# Emplacement cible : projects/lyux-server-infra/configs/samba/exports.template
+# Emplacement cible : lyux-server-infra/configs/samba/exports.template
 # Déployé sous : /etc/exports.d/lyux.exports
 # ==============================================================================
 

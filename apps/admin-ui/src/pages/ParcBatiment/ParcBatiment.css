@@ -1,0 +1,68 @@
+/* Page détaillée d'un bâtiment. Les couleurs suivent
+   docs/admin-ui-couleurs-etats.md (vert / gris / ambre). */
+
+.building-stats { margin-bottom: 16px; }
+
+/* Les salles occupent toute la largeur pour pouvoir être alignées en cartes. */
+.room-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.room-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 116px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.room-card:hover {
+  border-color: var(--brand);
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
+}
+.room-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.room-card-head { display: flex; align-items: center; gap: 8px; }
+.room-card-head strong { flex: 1; font-size: 12.5px; }
+.room-card-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.room-card-profile { color: var(--text-muted); font-size: 11px; }
+.room-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  color: var(--text-muted);
+  font-size: 10.5px;
+}
+.room-card-foot > span { display: inline-flex; align-items: center; gap: 4px; }
+.room-card-updates {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--warning-soft);
+  color: #b45309;
+  font-weight: 700;
+}
+[data-theme='dark'] .room-card-updates { color: var(--warning); }
+
+@media (max-width: 760px) {
+  .room-cards { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+}

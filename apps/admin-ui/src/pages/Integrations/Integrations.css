@@ -1,0 +1,14 @@
+.integration-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
+.integration-title { display: inline-flex; align-items: center; gap: 8px; }
+.integration-icon { width: 29px; height: 29px; border-radius: 7px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand); }
+.integration-description { color: var(--text-muted); font-size: 11.5px; margin-bottom: 10px; }
+.integration-detail { display: flex; align-items: center; gap: 6px; color: var(--text-subtle); font-size: 10px; padding: 7px 9px; border-radius: 6px; background: var(--surface-2); }
+.integration-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+
+@media (max-width: 1240px) {
+  .integration-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 760px) {
+  .integration-grid { grid-template-columns: 1fr; }
+}

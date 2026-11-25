@@ -2,7 +2,7 @@
 # ==============================================================================
 # Script de Déploiement et Provisioning Samba-AD DC (Opération Manchot)
 # Domaine : LYUX.LAN | NetBIOS : SERVEUR-LYUX | Rôle : Domain Controller
-# Emplacement cible : projects/lyux-server-infra/scripts/setup-samba-ad.sh
+# Emplacement cible : lyux-server-infra/scripts/setup-samba-ad.sh
 # ==============================================================================
 set -euo pipefail
 

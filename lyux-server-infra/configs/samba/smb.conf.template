@@ -1,7 +1,7 @@
 # ==============================================================================
 # Modèle de configuration Samba pour serveur central LyuX (Opération Manchot)
 # Emplacement cible sur le serveur : /etc/samba/smb.conf
-# Source projet : projects/lyux-server-infra/configs/samba/smb.conf.template
+# Source projet : lyux-server-infra/configs/samba/smb.conf.template
 # ==============================================================================
 
 [global]

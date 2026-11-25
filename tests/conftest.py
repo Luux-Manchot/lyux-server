@@ -90,7 +90,7 @@ REPORT_DIR = _dir("lyux-desktop/applications/report")
 SERVER_API_DIR = _dir("lyux-server/lyux-server-api")
 
 EXPECTED_PORTS = {
-    "cockpit": {"port": 9090, "protocol": "tcp", "transport": "https", "scope": "admin"},
+    "admin_ui": {"port": 8087, "protocol": "tcp", "transport": "http", "scope": "all"},
     "api": {"port": 8000, "protocol": "tcp", "transport": "http", "scope": "all"},
     "lam": {"port": 8082, "protocol": "tcp", "transport": "http", "scope": "admin_staff"},
     "glpi": {"port": 8085, "protocol": "tcp", "transport": "http", "scope": "all"},

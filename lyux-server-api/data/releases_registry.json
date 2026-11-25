@@ -1,0 +1,77 @@
+{
+  "releases": [
+    {
+      "id": "rel-1.0.0",
+      "version": "1.0.0",
+      "build": "20261125",
+      "channel": "stable",
+      "family": "client",
+      "profile_id": "standard",
+      "state": "published",
+      "target": "Catalogue contrôlé",
+      "author": "system",
+      "notes": "Socle profil Debian 13 Plasma6-X11 signé Ed25519.",
+      "released_at": "2026-11-25T12:27:41+00:00",
+      "published_at": "2026-11-25T12:27:41+00:00",
+      "key_id": "lyux-release-20261125122741",
+      "signature": "Vérifiée",
+      "detached_signature": "yAGzOMCCHBXPypo5UfJ86EghfBSveS_vPkQ8lARYrQdFqG02ihnEldtbgUQoUliETryvg5HIS8FTjB2KU9BwBg",
+      "manifest_hash": "8e02c68215af2ee5bb3b75ea5b2f898aa65e4857a352d73e1ed0e89206bbeb25",
+      "manifest": {
+        "schema": "lyux-profile-manifest",
+        "schema_version": 1,
+        "profile_id": "standard",
+        "profile_version": "1.0.0",
+        "issued_at": "2026-11-25T12:27:36+00:00",
+        "expires_at": "2026-12-25T12:27:41+00:00",
+        "scope": {
+          "building_id": "*",
+          "room_id": "*",
+          "role": "*"
+        },
+        "artifacts": [
+          {
+            "id": "lyux-base-profile",
+            "type": "config",
+            "name": "lyux-desktop-profile-1.0.0.json",
+            "url": "https://github.com/Luux-Manchot/lyux-desktop/releases/download/v1.0.0/lyux-desktop-profile-1.0.0.json",
+            "sha256": "104278905ebb1fa3e9d4b900a7a67b6e0abb7527f932146d7ef896c3d79601b6",
+            "size": 4096
+          }
+        ],
+        "compatibility": {
+          "debian": "13",
+          "desktop": "plasma6-x11",
+          "lyux_client_min": "1.0.0"
+        },
+        "signature": "yAGzOMCCHBXPypo5UfJ86EghfBSveS_vPkQ8lARYrQdFqG02ihnEldtbgUQoUliETryvg5HIS8FTjB2KU9BwBg"
+      },
+      "artifacts": [
+        {
+          "id": "lyux-base-profile",
+          "type": "config",
+          "name": "lyux-desktop-profile-1.0.0.json",
+          "url": "https://github.com/Luux-Manchot/lyux-desktop/releases/download/v1.0.0/lyux-desktop-profile-1.0.0.json",
+          "sha256": "104278905ebb1fa3e9d4b900a7a67b6e0abb7527f932146d7ef896c3d79601b6",
+          "size": 4096
+        }
+      ]
+    }
+  ],
+  "policy": {
+    "channel": "stable",
+    "auto_update": true,
+    "update_window": "22:00 – 05:00",
+    "require_signed": true,
+    "canary_room": "C14"
+  },
+  "audit_log": [
+    {
+      "timestamp": "2026-11-25T12:27:41+00:00",
+      "actor": "system",
+      "action": "init_published",
+      "release_id": "rel-1.0.0",
+      "detail": "Initialisation signée Ed25519 (lyux-release-20261125122741)"
+    }
+  ]
+}

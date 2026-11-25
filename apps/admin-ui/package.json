@@ -1,0 +1,20 @@
+{
+  "name": "lyux-admin-ui-prototype",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Prototype visuel du futur admin panel LyuX (sans API reelle)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.2.0",
+    "vite": "^7.3.8"
+  }
+}

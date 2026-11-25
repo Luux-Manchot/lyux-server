@@ -1,0 +1,145 @@
+/* Sous-page d'une salle : les couleurs d'état suivent
+   docs/admin-ui-couleurs-etats.md (vert / gris / ambre). */
+
+.room-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 24px;
+}
+
+/* Liste de postes sélectionnables à gauche, fiche détaillée à droite. */
+.room-machines-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(285px, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.machine-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(205px, 1fr));
+  gap: 9px;
+}
+
+.machine-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.machine-card:hover { border-color: var(--brand); background: var(--surface-3); }
+.machine-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.machine-card.selected {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  box-shadow: 0 0 0 1px var(--brand) inset;
+}
+
+.machine-card-head { display: flex; align-items: center; gap: 8px; }
+.machine-card-head strong { flex: 1; min-width: 0; font-size: 11.5px; overflow-wrap: anywhere; }
+.machine-card-check { flex: 0 0 auto; color: var(--brand); }
+
+.machine-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--neutral-soft);
+  color: var(--text-subtle);
+}
+.machine-icon.online { background: var(--success-soft); color: var(--success); }
+
+.machine-card-meta,
+.machine-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+}
+.machine-card-meta > span:first-child { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace; font-size: 10px; }
+.machine-card-foot { margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border); }
+.machine-card-foot > span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ---------- Panneau d'information du poste sélectionné ---------- */
+
+.machine-info-panel {
+  position: sticky;
+  top: 12px;
+  padding: 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.machine-info-panel.is-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 28px 16px;
+  text-align: center;
+}
+.machine-info-empty-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: var(--neutral-soft);
+  color: var(--text-subtle);
+}
+.machine-info-panel.is-empty strong { font-size: 12px; }
+.machine-info-panel.is-empty p { margin: 0; max-width: 230px; color: var(--text-muted); font-size: 10.5px; }
+
+.machine-info-head { display: flex; align-items: center; gap: 9px; padding-bottom: 11px; border-bottom: 1px solid var(--border); }
+.machine-info-title { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.machine-info-title strong { font-size: 12px; overflow-wrap: anywhere; }
+.machine-info-title small { color: var(--text-subtle); font-size: 10px; }
+
+.machine-info-lastseen {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 11px 0;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: var(--neutral-soft);
+  color: var(--text-muted);
+}
+.machine-info-lastseen.online { background: var(--success-soft); color: var(--success); }
+.machine-info-lastseen > div { display: flex; flex-direction: column; gap: 2px; }
+.machine-info-lastseen small { font-size: 10px; opacity: .85; }
+.machine-info-lastseen strong { font-size: 11.5px; color: var(--text); }
+.machine-info-lastseen.online strong { color: var(--success); }
+
+.machine-info-section { margin-top: 10px; }
+.machine-info-section h4 {
+  margin: 0 0 2px;
+  color: var(--text-subtle);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+}
+.machine-info-note { margin: 12px 0 0; color: var(--text-subtle); font-size: 9.5px; text-align: center; }
+
+@media (max-width: 1240px) {
+  .room-machines-layout { grid-template-columns: 1fr; }
+  .machine-info-panel { position: static; }
+}
+
+@media (max-width: 760px) {
+  .room-info-grid { grid-template-columns: 1fr; }
+  .machine-picker { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+}

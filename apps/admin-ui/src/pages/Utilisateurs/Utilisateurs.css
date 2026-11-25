@@ -1,0 +1,170 @@
+/* Page « Utilisateurs » — comptes (split-view) et classes/groupes de TP. */
+
+.users-split {
+  display: grid;
+  grid-template-columns: minmax(250px, 310px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.users-list {
+  display: grid;
+  gap: 4px;
+  max-height: 410px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.user-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.user-list-item:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-3);
+}
+
+.user-list-item.selected {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.user-list-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.user-list-meta strong {
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-list-meta small {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.user-detail-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-detail-identity h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.user-detail-identity small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.user-section {
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.user-section-title {
+  margin: 0 0 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--text-muted);
+}
+
+.user-inline-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.user-inline-form input,
+.user-inline-form select {
+  flex: 1;
+  min-width: 160px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 6px 9px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 11px;
+}
+
+.group-chip button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--text-muted);
+  display: inline-grid;
+  place-items: center;
+}
+
+.group-chip button:hover {
+  color: var(--danger);
+}
+
+.class-grid { display: grid; gap: 16px; align-items: start; }
+.class-section { margin-bottom: 10px; }
+.class-label { display: block; color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { padding: 3px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); font-size: 10.5px; }
+.share-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+.share-grid > div { display: flex; gap: 7px; padding: 9px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text-muted); }
+.share-grid > i { flex: 0 0 auto; color: var(--brand); }
+.share-grid strong { display: block; font-size: 10.5px; color: var(--text); }
+.share-grid small { display: block; font-size: 9.5px; }
+.card-footer-actions { display: flex; justify-content: flex-end; gap: 6px; padding-top: 10px; border-top: 1px solid var(--border); }
+
+@media (max-width: 900px) {
+  .users-split { grid-template-columns: 1fr; }
+  .users-list { max-height: 260px; }
+}
+
+@media (max-width: 760px) {
+  .class-grid { grid-template-columns: 1fr; }
+  .share-grid { grid-template-columns: 1fr; }
+}

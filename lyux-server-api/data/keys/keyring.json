@@ -1,0 +1,14 @@
+{
+  "active_key_id": "lyux-release-20261125122741",
+  "backup_key_id": null,
+  "keys": {
+    "lyux-release-20261125122741": {
+      "key_id": "lyux-release-20261125122741",
+      "role": "release",
+      "status": "active",
+      "created_at": "2026-11-25T12:27:41+00:00",
+      "last_rotated_at": "2026-11-25T12:27:41+00:00",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA+qXulsIqav4sDxinVqrlzG+Mr4e3QsMw5NJcoB6Wcg=\n-----END PUBLIC KEY-----\n"
+    }
+  }
+}
