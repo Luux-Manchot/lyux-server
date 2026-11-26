@@ -8,8 +8,9 @@ et n'effectue aucun appel réseau.
 
 La page `/logiciels/` permet de saisir un nom, un lien, une source, une version, une
 catégorie, un public cible et des arguments de lancement. Les catégories du catalogue
-incluent Proton et Wine ; la liste des logiciels prévus suit la matrice de compatibilité
-`lyux-desktop/docs/logiciels-compatibilite.md`. Le bouton « Vérifier » renvoie une version
+incluent Proton et Wine ; la liste des logiciels prévus suit la [matrice de compatibilité du
+wiki `lyux-desktop`](https://github.com/Luux-Manchot/lyux-desktop/wiki/Logiciels-et-compatibilite).
+Le bouton « Vérifier » renvoie une version
 simulée et « Ajouter au catalogue » crée une fiche visible dans la session. Tout disparaît
 au rechargement : aucun artefact n'est téléchargé, aucune version n'est réellement détectée,
 aucun logiciel n'est installé sur les postes.

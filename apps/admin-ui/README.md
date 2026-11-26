@@ -135,7 +135,7 @@ apparaît immédiatement dans la liste et devient la sélection courante, mais r
 jusqu'au rechargement.
 
 Le jeu de données reprend les logiciels prévus dans
-[`../../../lyux-desktop/docs/logiciels-compatibilite.md`](../../../lyux-desktop/docs/logiciels-compatibilite.md) :
+[la matrice de compatibilité du wiki `lyux-desktop`](https://github.com/Luux-Manchot/lyux-desktop/wiki/Logiciels-et-compatibilite) :
 bureautique, Internet, NSI/SNT, sciences, création, impression 3D, ainsi que les entrées
 `Proton (Steam Play)` et `Régressi` classées respectivement dans Proton et Wine. Les champs
 complémentaires sont définis dans `apps` (`src/data/mock.js`). Aucune action n'est envoyée
