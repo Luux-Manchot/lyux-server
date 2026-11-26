@@ -87,3 +87,59 @@ def test_nas_home_path_unchanged_across_class_change_or_redoublement():
     assert res.status_code == 200
     assert res.json()["nas"]["home_path"] == "/srv/samba/homes/l.martin"
     client.post("/api/v1/sessions/logout", json={"username": "l.martin", "hostname": "PC-1G2-01"})
+
+
+def test_nss_users_and_desktop_login_flow():
+    admin_tok = _login("lyux-admin", "LyuxAdmin2026!")
+    # Créer un utilisateur avec mot de passe personnalisé
+    create_res = client.post(
+        "/api/v1/users/create",
+        headers={"Authorization": f"Bearer {admin_tok}"},
+        json={
+            "username": "camille.dupont",
+            "first_name": "Camille",
+            "last_name": "Dupont",
+            "role": "eleve",
+            "classe": "2GT1",
+            "password": "TestPassword2026!",
+        },
+    )
+    assert create_res.status_code in (200, 201), create_res.text
+
+    nss_res = client.get("/api/v1/client/nss-users")
+    assert nss_res.status_code == 200
+    users = nss_res.json()["users"]
+    entry = next((u for u in users if u["username"] == "camille.dupont"), None)
+    assert entry is not None
+    assert 10000 <= entry["uid"] < 60000
+    assert entry["home"] == "/home/camille.dupont"
+
+    bad_res = client.post(
+        "/api/v1/auth/desktop-login",
+        json={"username": "camille.dupont", "password": "wrong", "hostname": "PC-01", "ip": "192.168.10.20"},
+    )
+    assert bad_res.status_code == 401
+
+    ok_res = client.post(
+        "/api/v1/auth/desktop-login",
+        json={"username": "camille.dupont", "password": "TestPassword2026!", "hostname": "PC-01", "ip": "192.168.10.20"},
+    )
+    assert ok_res.status_code == 200
+    assert ok_res.json()["authenticated"] is True
+    assert ok_res.json()["uid"] == entry["uid"]
+
+    # Ouverture de session PAM sur PC-01
+    open_res = client.post(
+        "/api/v1/sessions/login-check",
+        json={"username": "camille.dupont", "hostname": "PC-01", "ip": "192.168.10.20"},
+    )
+    assert open_res.status_code == 200
+
+    # Élève mono-session : refusé sur un second PC tant qu'il est connecté sur PC-01
+    dup_res = client.post(
+        "/api/v1/auth/desktop-login",
+        json={"username": "camille.dupont", "password": "TestPassword2026!", "hostname": "PC-02", "ip": "192.168.10.21"},
+    )
+    assert dup_res.status_code == 409
+
+    client.post("/api/v1/sessions/logout", json={"username": "camille.dupont", "hostname": "PC-01"})

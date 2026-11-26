@@ -33,7 +33,7 @@ from profiles import (
     record_profile_audit,
     resolve_effective_profile,
 )
-from sessions import check_and_register_session, register_logout
+from sessions import check_and_register_session, register_logout, stable_uid_for_username
 
 router = APIRouter(prefix="/api/v1", tags=["admin-ui"])
 
@@ -777,6 +777,68 @@ class SessionLogoutPayload(BaseModel):
     username: str
     hostname: str
     files_synced: int = 0
+
+
+class DesktopLoginPayload(BaseModel):
+    username: str
+    password: str
+    hostname: str = ""
+    ip: str = ""
+
+
+@router.get("/client/nss-users")
+def client_nss_users():
+    """Catalogue NSS léger (sans mot de passe) pour synchroniser /var/lib/extrausers sur les postes."""
+    main_mod = _get_main_module()
+    roles_catalog, matrix = ensure_rbac_state(_STATE)
+    users_out = []
+    for u in main_mod.TEST_USERS:
+        if u.get("status") == "disabled":
+            continue
+        uname = (u.get("username") or "").strip().lower()
+        if not uname or uname in ("root", "lyux-admin", "invite"):
+            continue
+        view = build_user_rbac_view(u, roles_catalog, matrix)
+        uid = stable_uid_for_username(uname)
+        users_out.append({
+            "username": uname,
+            "uid": uid,
+            "gid": uid,
+            "display_name": view["display_name"],
+            "effective_role": view["effective_role"],
+            "home": f"/home/{uname}",
+            "shell": "/bin/bash",
+        })
+    return {"users": users_out}
+
+
+@router.post("/auth/desktop-login")
+def desktop_login(req: DesktopLoginPayload):
+    """Authentifie un utilisateur du lycée depuis SDDM/PAM sur un poste client."""
+    uname = (req.username or "").strip().lower()
+    user = _find_user(uname)
+    if not user or user.get("status") == "disabled":
+        raise HTTPException(status_code=401, detail="Utilisateur inconnu ou désactivé.")
+    if user.get("password") != req.password:
+        raise HTTPException(status_code=401, detail="Mot de passe incorrect.")
+    roles_catalog, matrix = ensure_rbac_state(_STATE)
+    user_view = build_user_rbac_view(user, roles_catalog, matrix)
+    allow_multi = bool(user_view.get("permissions", {}).get("sessions.multi", False))
+    host = (req.hostname or "CLIENT").strip().upper()
+    active_map = _STATE.get("active_sessions", {})
+    other_hosts = [s for s in active_map.get(uname, []) if s.get("hostname") != host]
+    if other_hosts and not allow_multi:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Utilisateur déjà connecté sur le poste {other_hosts[0]['hostname']}.",
+        )
+    return {
+        "authenticated": True,
+        "username": uname,
+        "uid": stable_uid_for_username(uname),
+        "effective_role": user_view["effective_role"],
+        "roles": user_view["roles"],
+    }
 
 
 @router.post("/sessions/login-check")

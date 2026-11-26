@@ -31,7 +31,7 @@
       "sciences",
       "multimedia"
     ],
-    "updated_at": "2026-11-26T19:17:10"
+    "updated_at": "2026-11-26T19:23:19"
   },
   "roles": [
     {
@@ -428,6 +428,181 @@
   ],
   "profile_audit_log": [
     {
+      "timestamp": "2026-11-26T19:23:25",
+      "actor": "lyux-admin",
+      "action": "unassign_profile",
+      "profile_id": "eleve",
+      "detail": "Retiré de machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-26T19:23:25",
+      "actor": "lyux-admin",
+      "action": "reset_default",
+      "profile_id": "eleve",
+      "detail": "Restauration du profil LyuX par défaut"
+    },
+    {
+      "timestamp": "2026-11-26T19:23:25",
+      "actor": "lyux-admin",
+      "action": "pilot_apply",
+      "profile_id": "eleve",
+      "detail": "Pilote sur machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-26T19:23:24",
+      "actor": "lyux-admin",
+      "action": "assign_profile",
+      "profile_id": "robotique",
+      "detail": "Affecté à user:m.curie"
+    },
+    {
+      "timestamp": "2026-11-26T19:23:24",
+      "actor": "lyux-admin",
+      "action": "save_profile",
+      "profile_id": "robotique",
+      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:55",
+      "actor": "lyux-admin",
+      "action": "unassign_profile",
+      "profile_id": "eleve",
+      "detail": "Retiré de machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:55",
+      "actor": "lyux-admin",
+      "action": "reset_default",
+      "profile_id": "eleve",
+      "detail": "Restauration du profil LyuX par défaut"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:55",
+      "actor": "lyux-admin",
+      "action": "pilot_apply",
+      "profile_id": "eleve",
+      "detail": "Pilote sur machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:54",
+      "actor": "lyux-admin",
+      "action": "assign_profile",
+      "profile_id": "robotique",
+      "detail": "Affecté à user:m.curie"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:54",
+      "actor": "lyux-admin",
+      "action": "save_profile",
+      "profile_id": "robotique",
+      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:33",
+      "actor": "lyux-admin",
+      "action": "unassign_profile",
+      "profile_id": "eleve",
+      "detail": "Retiré de machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:33",
+      "actor": "lyux-admin",
+      "action": "reset_default",
+      "profile_id": "eleve",
+      "detail": "Restauration du profil LyuX par défaut"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:33",
+      "actor": "lyux-admin",
+      "action": "pilot_apply",
+      "profile_id": "eleve",
+      "detail": "Pilote sur machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:33",
+      "actor": "lyux-admin",
+      "action": "assign_profile",
+      "profile_id": "robotique",
+      "detail": "Affecté à user:m.curie"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:33",
+      "actor": "lyux-admin",
+      "action": "save_profile",
+      "profile_id": "robotique",
+      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:15",
+      "actor": "lyux-admin",
+      "action": "unassign_profile",
+      "profile_id": "eleve",
+      "detail": "Retiré de machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:15",
+      "actor": "lyux-admin",
+      "action": "reset_default",
+      "profile_id": "eleve",
+      "detail": "Restauration du profil LyuX par défaut"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:15",
+      "actor": "lyux-admin",
+      "action": "pilot_apply",
+      "profile_id": "eleve",
+      "detail": "Pilote sur machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:15",
+      "actor": "lyux-admin",
+      "action": "assign_profile",
+      "profile_id": "robotique",
+      "detail": "Affecté à user:m.curie"
+    },
+    {
+      "timestamp": "2026-11-26T19:22:15",
+      "actor": "lyux-admin",
+      "action": "save_profile",
+      "profile_id": "robotique",
+      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
+    },
+    {
+      "timestamp": "2026-11-26T19:21:50",
+      "actor": "lyux-admin",
+      "action": "unassign_profile",
+      "profile_id": "eleve",
+      "detail": "Retiré de machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-26T19:21:50",
+      "actor": "lyux-admin",
+      "action": "reset_default",
+      "profile_id": "eleve",
+      "detail": "Restauration du profil LyuX par défaut"
+    },
+    {
+      "timestamp": "2026-11-26T19:21:50",
+      "actor": "lyux-admin",
+      "action": "pilot_apply",
+      "profile_id": "eleve",
+      "detail": "Pilote sur machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-26T19:21:50",
+      "actor": "lyux-admin",
+      "action": "assign_profile",
+      "profile_id": "robotique",
+      "detail": "Affecté à user:m.curie"
+    },
+    {
+      "timestamp": "2026-11-26T19:21:50",
+      "actor": "lyux-admin",
+      "action": "save_profile",
+      "profile_id": "robotique",
+      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
+    },
+    {
       "timestamp": "2026-11-26T19:17:15",
       "actor": "lyux-admin",
       "action": "unassign_profile",
@@ -601,116 +776,23 @@
       "action": "save_profile",
       "profile_id": "robotique",
       "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
-    },
-    {
-      "timestamp": "2026-11-25T19:59:51",
-      "actor": "lyux-admin",
-      "action": "unassign_profile",
-      "profile_id": "eleve",
-      "detail": "Retiré de machine:PC-C14-01"
-    },
-    {
-      "timestamp": "2026-11-25T19:59:51",
-      "actor": "lyux-admin",
-      "action": "reset_default",
-      "profile_id": "eleve",
-      "detail": "Restauration du profil LyuX par défaut"
-    },
-    {
-      "timestamp": "2026-11-25T19:59:51",
-      "actor": "lyux-admin",
-      "action": "pilot_apply",
-      "profile_id": "eleve",
-      "detail": "Pilote sur machine:PC-C14-01"
-    },
-    {
-      "timestamp": "2026-11-25T19:59:51",
-      "actor": "lyux-admin",
-      "action": "assign_profile",
-      "profile_id": "robotique",
-      "detail": "Affecté à user:m.curie"
-    },
-    {
-      "timestamp": "2026-11-25T19:59:51",
-      "actor": "lyux-admin",
-      "action": "save_profile",
-      "profile_id": "robotique",
-      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
-    },
-    {
-      "timestamp": "2026-11-25T19:59:17",
-      "actor": "lyux-admin",
-      "action": "unassign_profile",
-      "profile_id": "eleve",
-      "detail": "Retiré de machine:PC-C14-01"
-    },
-    {
-      "timestamp": "2026-11-25T19:59:17",
-      "actor": "lyux-admin",
-      "action": "reset_default",
-      "profile_id": "eleve",
-      "detail": "Restauration du profil LyuX par défaut"
-    },
-    {
-      "timestamp": "2026-11-25T19:59:17",
-      "actor": "lyux-admin",
-      "action": "pilot_apply",
-      "profile_id": "eleve",
-      "detail": "Pilote sur machine:PC-C14-01"
-    },
-    {
-      "timestamp": "2026-11-25T19:59:16",
-      "actor": "lyux-admin",
-      "action": "assign_profile",
-      "profile_id": "robotique",
-      "detail": "Affecté à user:m.curie"
-    },
-    {
-      "timestamp": "2026-11-25T19:59:16",
-      "actor": "lyux-admin",
-      "action": "save_profile",
-      "profile_id": "robotique",
-      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
-    },
-    {
-      "timestamp": "2026-11-25T19:56:13",
-      "actor": "lyux-admin",
-      "action": "reset_default",
-      "profile_id": "eleve",
-      "detail": "Restauration du profil LyuX par défaut"
-    },
-    {
-      "timestamp": "2026-11-25T19:56:13",
-      "actor": "lyux-admin",
-      "action": "pilot_apply",
-      "profile_id": "eleve",
-      "detail": "Pilote sur machine:PC-C14-01"
-    },
-    {
-      "timestamp": "2026-11-25T19:56:13",
-      "actor": "lyux-admin",
-      "action": "assign_profile",
-      "profile_id": "robotique",
-      "detail": "Affecté à user:m.curie"
-    },
-    {
-      "timestamp": "2026-11-25T19:56:13",
-      "actor": "lyux-admin",
-      "action": "save_profile",
-      "profile_id": "robotique",
-      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
     }
   ],
   "active_sessions": {},
   "session_sync": {
     "l.martin": {
       "last_machine": "PC-1G2-01",
-      "last_sync_at": "2026-11-26T19:17:15",
+      "last_sync_at": "2026-11-26T19:23:25",
       "files_synced": 0
     },
     "p.curie": {
       "last_machine": "PC-B204-00",
-      "last_sync_at": "2026-11-26T19:17:15",
+      "last_sync_at": "2026-11-26T19:23:25",
+      "files_synced": 0
+    },
+    "camille.dupont": {
+      "last_machine": "PC-01",
+      "last_sync_at": "2026-11-26T19:23:25",
       "files_synced": 0
     }
   }

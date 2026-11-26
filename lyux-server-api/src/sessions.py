@@ -4,9 +4,15 @@ et de l'emplacement permanent du home NAS (/srv/samba/homes/<uid>).
 """
 
 import datetime
+import hashlib
 from typing import Any, Dict, List, Optional, Tuple
 
 NAS_BASE = "/srv/samba"
+
+
+def stable_uid_for_username(username: str) -> int:
+    digest = hashlib.sha256(username.strip().lower().encode("utf-8")).digest()
+    return 10000 + (int.from_bytes(digest[:4], "big") % 50000)
 
 
 def get_nas_paths(username: str, classe: Optional[str], school_year: str = "2026-2027") -> Dict[str, str]:
