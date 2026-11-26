@@ -108,6 +108,7 @@ class CreateUserRequest(BaseModel):
     classe: Optional[str] = ""
     subgroup: Optional[str] = ""
     classes_assigned: Optional[List[str]] = []
+    password: Optional[str] = None
 
 class CsvImportRequest(BaseModel):
     csv_content: str
@@ -346,7 +347,7 @@ def create_user_endpoint(req: CreateUserRequest, authorization: Optional[str] = 
         "roles": user_roles,
         "classe": req.classe or "Sans affectation",
         "subgroup": req.subgroup or "-",
-        "password": f"Pass{random.randint(1000, 9999)}!",
+        "password": (req.password.strip() if req.password and req.password.strip() else f"Pass{random.randint(1000, 9999)}!"),
         "room": "B204",
         "app": "Thonny IDE" if "eleve" in user_roles and len(user_roles) == 1 else "Veyon Master"
     }

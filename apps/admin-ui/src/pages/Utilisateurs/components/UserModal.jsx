@@ -8,6 +8,7 @@ export default function UserModal({ open, onClose, onCreated, notify }) {
   const [lastName, setLastName] = useState('')
   const [role, setRole] = useState('eleve')
   const [classe, setClasse] = useState('')
+  const [password, setPassword] = useState('')
   const [saving, setSaving] = useState(false)
 
   const handleCreate = async () => {
@@ -15,11 +16,14 @@ export default function UserModal({ open, onClose, onCreated, notify }) {
       notify('Renseignez le prénom et le nom.', 'warning')
       return
     }
-    const username = `${firstName.trim()[0]}.${lastName.trim()}`
+    const cleanPart = (s) => s
+      .trim()
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9.]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+    const username = `${cleanPart(firstName)}.${cleanPart(lastName)}`
     setSaving(true)
     try {
       const res = await api.createUser({
@@ -28,6 +32,7 @@ export default function UserModal({ open, onClose, onCreated, notify }) {
         last_name: lastName.trim(),
         role,
         classe: classe.trim() || 'Sans affectation',
+        ...(password.trim() ? { password: password.trim() } : {}),
       })
       const pwd = res?.user?.password ? ` (mot de passe : ${res.user.password})` : ''
       notify(`Compte ${username} créé${pwd}.`, 'success')
@@ -35,6 +40,7 @@ export default function UserModal({ open, onClose, onCreated, notify }) {
       setLastName('')
       setRole('eleve')
       setClasse('')
+      setPassword('')
       if (onCreated) onCreated()
       onClose()
     } catch (err) {
@@ -48,7 +54,7 @@ export default function UserModal({ open, onClose, onCreated, notify }) {
     <Modal
       open={open}
       title="Créer un utilisateur"
-      subtitle="Le compte sera rattaché à l'annuaire de l'établissement."
+      subtitle="Identifiant généré automatiquement au format prenom.nom."
       onClose={onClose}
       footer={
         <>
@@ -58,12 +64,15 @@ export default function UserModal({ open, onClose, onCreated, notify }) {
       }
     >
       <div className="form-grid">
-        <FormField label="Prénom"><input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Ex. Camille" /></FormField>
-        <FormField label="Nom"><input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Ex. Rousseau" /></FormField>
+        <FormField label="Prénom"><input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Ex. Florian" /></FormField>
+        <FormField label="Nom"><input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Ex. Rodrigues" /></FormField>
         <FormField label="Rôle principal">
           <Select value={role} onChange={setRole} options={Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label }))} />
         </FormField>
         <FormField label="Classe"><input value={classe} onChange={(e) => setClasse(e.target.value)} placeholder="Ex. 1G1" /></FormField>
+        <FormField label="Mot de passe (optionnel)" hint="Laissez vide pour en générer un automatiquement">
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Ex. 1234 ou mot de passe choisi" />
+        </FormField>
       </div>
     </Modal>
   )
