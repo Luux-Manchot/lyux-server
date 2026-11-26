@@ -1247,6 +1247,7 @@ def update_user(
                 u["groups"] = req.groups
             if req.status is not None:
                 u["status"] = req.status
+            main_mod.save_users_state()
             return {"status": "updated", "user": build_user_rbac_view(u, roles_catalog, matrix)}
     raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
 
@@ -1272,5 +1273,6 @@ def delete_user(username: str, authorization: Optional[str] = Header(default=Non
         if admin_count <= 1:
             raise HTTPException(status_code=400, detail="Impossible de supprimer le dernier administrateur.")
     main_mod.TEST_USERS.pop(idx)
+    main_mod.save_users_state()
     return {"status": "deleted", "username": target}
 

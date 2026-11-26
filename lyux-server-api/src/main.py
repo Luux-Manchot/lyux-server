@@ -2,6 +2,8 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import json
+import os
 import subprocess
 import random
 import string
@@ -237,7 +239,7 @@ ROOM_CATALOG = {
     }
 }
 
-TEST_USERS = [
+DEFAULT_USERS = [
     {"username": "lyux-admin", "display_name": "Administrateur Système", "role": "admin", "classe": "IT / Maintenance", "password": "LyuxAdmin2026!", "room": "ALL", "app": "Console Système & Cockpit"},
     {"username": "lyux.eleve", "display_name": "Élève Démo (LyuX)", "role": "eleve", "classe": "1G1 (B204)", "password": "Eleve2026!", "room": "B204", "app": "Thonny IDE Python & Kiosk"},
     {"username": "lyux.prof", "display_name": "Professeur Démo (LyuX)", "role": "enseignant", "classe": "Maths / NSI", "password": "Prof2026!", "room": "B204", "app": "Veyon Master (Supervision)"},
@@ -251,6 +253,34 @@ TEST_USERS = [
     {"username": "alain.direction", "display_name": "Alain Direction", "role": "administration", "classe": "Direction", "password": "Admin2026!", "room": "ADMIN", "app": "GLPI & Supervision"},
     {"username": "lyux-admin", "display_name": "Admin LyuX", "role": "technicien", "classe": "IT / Support", "password": "LyuxDeploy2026!", "room": "SERVEUR", "app": "Terminal & Ansible"}
 ]
+
+USERS_STATE_PATH = Path(
+    os.environ.get(
+        "LYUX_USERS_STATE_PATH",
+        str(Path(__file__).resolve().parent.parent / "data" / "users_state.json"),
+    )
+)
+
+
+def load_users_state() -> List[Dict[str, Any]]:
+    if USERS_STATE_PATH.exists():
+        try:
+            data = json.loads(USERS_STATE_PATH.read_text(encoding="utf-8"))
+            if isinstance(data, list) and data:
+                return data
+        except (OSError, json.JSONDecodeError):
+            pass
+    return [dict(u) for u in DEFAULT_USERS]
+
+
+def save_users_state() -> None:
+    USERS_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = USERS_STATE_PATH.with_suffix(".tmp")
+    tmp_path.write_text(json.dumps(TEST_USERS, indent=2, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp_path, USERS_STATE_PATH)
+
+
+TEST_USERS = load_users_state()
 
 ENROLLED_MACHINES = {
     "LyuX-C14-PC01": {"hostname": "LyuX-C14-PC01", "room": "C14", "building_id": "BAT-C", "ip": "192.168.10.13", "mac": "08:00:27:f0:45:15", "user": "Session Libre", "role": "eleve", "locked": False, "status": "online"},
@@ -355,6 +385,7 @@ def create_user_endpoint(req: CreateUserRequest, authorization: Optional[str] = 
     view = build_user_rbac_view(new_user, roles_catalog, matrix)
     new_user["role"] = view["effective_role"]
     TEST_USERS.append(new_user)
+    save_users_state()
     if req.classe and req.classe.upper() in CLASSES_CATALOG and new_user["role"] == "eleve":
         CLASSES_CATALOG[req.classe.upper()]["students_count"] += 1
     from sessions import ensure_nas_user_home
@@ -390,6 +421,7 @@ def import_csv_endpoint(req: CsvImportRequest):
         if not req.dry_run:
             if not any(u["username"] == uname for u in TEST_USERS):
                 TEST_USERS.append(user)
+                save_users_state()
             if classe not in CLASSES_CATALOG:
                 CLASSES_CATALOG[classe] = {
                     "id": classe,
@@ -834,6 +866,7 @@ def reset_password(req: ResetPasswordRequest, authorization: Optional[str] = Hea
         raise HTTPException(status_code=404, detail="Utilisateur inconnu")
     new_pwd = (req.new_password or "").strip() or f"Pass{datetime.datetime.now().strftime('%M%S')}!"
     user["password"] = new_pwd
+    save_users_state()
     from sessions import ensure_nas_user_home
     ensure_nas_user_home(user["username"], new_pwd)
     return {"success": True, "username": user["username"], "new_password": new_pwd}
