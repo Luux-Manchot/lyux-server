@@ -31,7 +31,7 @@
       "sciences",
       "multimedia"
     ],
-    "updated_at": "2026-11-26T19:10:08"
+    "updated_at": "2026-11-26T19:17:10"
   },
   "roles": [
     {
@@ -428,6 +428,41 @@
   ],
   "profile_audit_log": [
     {
+      "timestamp": "2026-11-26T19:17:15",
+      "actor": "lyux-admin",
+      "action": "unassign_profile",
+      "profile_id": "eleve",
+      "detail": "Retiré de machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-26T19:17:15",
+      "actor": "lyux-admin",
+      "action": "reset_default",
+      "profile_id": "eleve",
+      "detail": "Restauration du profil LyuX par défaut"
+    },
+    {
+      "timestamp": "2026-11-26T19:17:15",
+      "actor": "lyux-admin",
+      "action": "pilot_apply",
+      "profile_id": "eleve",
+      "detail": "Pilote sur machine:PC-C14-01"
+    },
+    {
+      "timestamp": "2026-11-26T19:17:15",
+      "actor": "lyux-admin",
+      "action": "assign_profile",
+      "profile_id": "robotique",
+      "detail": "Affecté à user:m.curie"
+    },
+    {
+      "timestamp": "2026-11-26T19:17:15",
+      "actor": "lyux-admin",
+      "action": "save_profile",
+      "profile_id": "robotique",
+      "detail": "Thème=lyux-ocean, 2 paquet(s), kiosk=False"
+    },
+    {
       "timestamp": "2026-11-26T19:10:13",
       "actor": "lyux-admin",
       "action": "unassign_profile",
@@ -670,12 +705,12 @@
   "session_sync": {
     "l.martin": {
       "last_machine": "PC-1G2-01",
-      "last_sync_at": "2026-11-26T19:10:13",
+      "last_sync_at": "2026-11-26T19:17:15",
       "files_synced": 0
     },
     "p.curie": {
       "last_machine": "PC-B204-00",
-      "last_sync_at": "2026-11-26T19:10:13",
+      "last_sync_at": "2026-11-26T19:17:15",
       "files_synced": 0
     }
   }

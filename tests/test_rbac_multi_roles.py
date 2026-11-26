@@ -99,3 +99,43 @@ def test_custom_role_lifecycle_and_system_role_protection():
 
     deleted = client.delete("/api/v1/roles/referent-labo", headers=headers)
     assert deleted.status_code == 200
+
+
+def test_admin_user_password_update_admin_login_and_user_deletion():
+    admin_tok = _login("lyux-admin", "LyuxAdmin2026!")
+    headers = {"Authorization": f"Bearer {admin_tok}"}
+
+    c = client.post(
+        "/api/v1/users/create",
+        headers=headers,
+        json={
+            "username": "camille.rousseau",
+            "first_name": "Camille",
+            "last_name": "Rousseau",
+            "role": "admin",
+            "classe": "Direction",
+            "password": "InitAdmin2026!",
+        },
+    )
+    assert c.status_code == 200, c.text
+
+    # Modification manuelle du mot de passe
+    rst = client.post(
+        "/api/v1/control/reset-password",
+        headers=headers,
+        json={"username": "camille.rousseau", "new_password": "NewAdmin2026!"},
+    )
+    assert rst.status_code == 200
+    assert rst.json()["new_password"] == "NewAdmin2026!"
+
+    # Le nouvel administrateur accède au panneau admin avec son nouveau mot de passe
+    new_admin_tok = _login("camille.rousseau", "NewAdmin2026!")
+    me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {new_admin_tok}"})
+    assert me.status_code == 200
+    assert me.json()["effective_role"] == "admin"
+    assert me.json()["permissions"]["roles.manage"] is True
+
+    # Suppression du compte
+    d = client.delete("/api/v1/users/camille.rousseau", headers=headers)
+    assert d.status_code == 200
+

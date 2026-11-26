@@ -134,7 +134,7 @@ export default function UsersPanel({
   }
 
   const handleToggleStatus = async () => {
-    if (!selected) return
+    if (!selected || !canManage) return
     const nextStatus = selected.status === 'active' ? 'disabled' : 'active'
     try {
       await api.updateUser(selected.username, { status: nextStatus })
@@ -142,6 +142,18 @@ export default function UsersPanel({
       if (onUserUpdated) onUserUpdated()
     } catch (err) {
       notify(err.message || 'Erreur lors du changement de statut.', 'danger')
+    }
+  }
+
+  const handleDeleteUser = async () => {
+    if (!selected || !canManage) return
+    try {
+      await api.deleteUser(selected.username)
+      notify(`Compte ${selected.username} supprimé.`, 'info')
+      setSelectedUsername(null)
+      if (onUserUpdated) onUserUpdated()
+    } catch (err) {
+      notify(err.message || 'Impossible de supprimer ce compte.', 'danger')
     }
   }
 
@@ -218,9 +230,16 @@ export default function UsersPanel({
                   <Badge tone={selected.status === 'active' ? 'success' : 'neutral'} dot>
                     {selected.status === 'active' ? 'Actif' : 'Désactivé'}
                   </Badge>
-                  <Button size="sm" onClick={handleToggleStatus}>
-                    {selected.status === 'active' ? 'Désactiver' : 'Activer'}
-                  </Button>
+                  {canManage && (
+                    <>
+                      <Button size="sm" onClick={handleToggleStatus}>
+                        {selected.status === 'active' ? 'Désactiver' : 'Activer'}
+                      </Button>
+                      <Button size="sm" icon="trash" onClick={handleDeleteUser}>
+                        Supprimer
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
 

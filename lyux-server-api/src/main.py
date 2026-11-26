@@ -274,6 +274,7 @@ class LockRoomRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     username: str
+    new_password: Optional[str] = None
 
 @app.get("/health")
 def health_check():
@@ -823,13 +824,19 @@ def unlock_all_machines(authorization: Optional[str] = Header(default=None)):
     }
 
 @app.post("/api/v1/control/reset-password")
-def reset_password(req: ResetPasswordRequest):
-    user = next((u for u in TEST_USERS if u["username"] == req.username), None)
+def reset_password(req: ResetPasswordRequest, authorization: Optional[str] = Header(default=None)):
+    if authorization:
+        from admin_routes import _require_permission
+        _require_permission(authorization, "users.manage")
+    target = req.username.strip().lower()
+    user = next((u for u in TEST_USERS if u["username"].lower() == target), None)
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur inconnu")
-    new_pwd = f"Pass{datetime.datetime.now().strftime('%M%S')}!"
+    new_pwd = (req.new_password or "").strip() or f"Pass{datetime.datetime.now().strftime('%M%S')}!"
     user["password"] = new_pwd
-    return {"success": True, "username": req.username, "new_password": new_pwd}
+    from sessions import ensure_nas_user_home
+    ensure_nas_user_home(user["username"], new_pwd)
+    return {"success": True, "username": user["username"], "new_password": new_pwd}
 
 @app.post("/api/v1/enroll/generate-otp", response_model=OtpGenerationResponse)
 def generate_otp(req: OtpGenerationRequest):

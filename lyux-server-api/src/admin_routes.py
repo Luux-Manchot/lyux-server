@@ -349,6 +349,11 @@ def login(req: LoginRequest):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Identifiant ou mot de passe incorrect.",
         )
+    if matched.get("status") == "disabled":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Compte désactivé.",
+        )
 
     roles_catalog, matrix = ensure_rbac_state(_STATE)
     user_view = build_user_rbac_view(matched, roles_catalog, matrix)
@@ -1182,4 +1187,28 @@ def update_user(
                 u["status"] = req.status
             return {"status": "updated", "user": build_user_rbac_view(u, roles_catalog, matrix)}
     raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
+
+
+@router.delete("/users/{username}")
+def delete_user(username: str, authorization: Optional[str] = Header(default=None)):
+    actor = _require_permission(authorization, "users.manage")["username"]
+    main_mod = _get_main_module()
+    target = username.strip().lower()
+    if target == actor.lower():
+        raise HTTPException(status_code=400, detail="Impossible de supprimer votre propre compte actif.")
+    idx = next((i for i, u in enumerate(main_mod.TEST_USERS) if u.get("username", "").lower() == target), None)
+    if idx is None:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
+    user_obj = main_mod.TEST_USERS[idx]
+    roles_catalog, matrix = ensure_rbac_state(_STATE)
+    view = build_user_rbac_view(user_obj, roles_catalog, matrix)
+    if view["effective_role"] == "admin":
+        admin_count = sum(
+            1 for u in main_mod.TEST_USERS
+            if build_user_rbac_view(u, roles_catalog, matrix)["effective_role"] == "admin"
+        )
+        if admin_count <= 1:
+            raise HTTPException(status_code=400, detail="Impossible de supprimer le dernier administrateur.")
+    main_mod.TEST_USERS.pop(idx)
+    return {"status": "deleted", "username": target}
 

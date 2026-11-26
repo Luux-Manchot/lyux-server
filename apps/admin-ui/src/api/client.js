@@ -138,6 +138,8 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(payload),
     }),
+  deleteUser: (username) =>
+    apiRequest(`/api/v1/users/${encodeURIComponent(username)}`, { method: 'DELETE' }),
   resetPassword: (username, newPassword) =>
     apiRequest('/api/v1/control/reset-password', {
       method: 'POST',
