@@ -64,14 +64,14 @@ export default function UserModal({ open, onClose, onCreated, notify }) {
       }
     >
       <div className="form-grid">
-        <FormField label="Prénom"><input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Ex. Florian" /></FormField>
-        <FormField label="Nom"><input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Ex. Rodrigues" /></FormField>
+        <FormField label="Prénom"><input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Ex. Camille" /></FormField>
+        <FormField label="Nom"><input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Ex. Rousseau" /></FormField>
         <FormField label="Rôle principal">
           <Select value={role} onChange={setRole} options={Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label }))} />
         </FormField>
         <FormField label="Classe"><input value={classe} onChange={(e) => setClasse(e.target.value)} placeholder="Ex. 1G1" /></FormField>
         <FormField label="Mot de passe (optionnel)" hint="Laissez vide pour en générer un automatiquement">
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Ex. 1234 ou mot de passe choisi" />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Saisir un mot de passe" />
         </FormField>
       </div>
     </Modal>
