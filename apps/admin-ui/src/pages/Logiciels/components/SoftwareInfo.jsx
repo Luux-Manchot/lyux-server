@@ -19,49 +19,13 @@ const AVAILABLE_ROLES = [
 
 export default function SoftwareInfo({ app, notify, onUpdated, onDeleted }) {
   if (!app) {
-    const currentRoles = app.allowed_roles || app.allowed_groups || ['eleve', 'prof', 'admin']
-
-  const toggleRole = async (roleId) => {
-    const next = currentRoles.includes(roleId)
-      ? currentRoles.filter((r) => r !== roleId)
-      : [...currentRoles, roleId]
-    try {
-      const res = await api.updateApp(app.id, { allowed_roles: next })
-      if (onUpdated && res?.app) onUpdated(res.app)
-      notify(`Droits mis à jour pour ${app.name}.`, 'success')
-    } catch (err) {
-      notify(err.message || 'Erreur lors de la mise à jour des droits.', 'danger')
-    }
-  }
-
-  const handleDelete = async () => {
-    try {
-      await api.deleteApp(app.id)
-      if (onDeleted) onDeleted(app.id)
-      notify(`${app.name} retiré du catalogue.`, 'info')
-    } catch (err) {
-      notify(err.message || 'Erreur lors de la suppression.', 'danger')
-    }
-  }
-
-  return (
+    return (
       <div className="software-info-panel is-empty">
         <span className="software-info-empty-icon"><Icon name="package" size={22} /></span>
         <strong>Aucune application sélectionnée</strong>
         <p>Choisissez une application dans la liste pour afficher sa fiche.</p>
       </div>
     )
-  }
-
-  const status = STATUS[app.status] || STATUS.draft
-
-  const handleDeploy = async () => {
-    try {
-      const res = await api.deployApps()
-      notify(res?.message || `Déploiement de ${app.name} déclenché.`, 'success')
-    } catch (err) {
-      notify(err.message || 'Erreur lors du déploiement.', 'danger')
-    }
   }
 
   const currentRoles = app.allowed_roles || app.allowed_groups || ['eleve', 'prof', 'admin']
@@ -86,6 +50,17 @@ export default function SoftwareInfo({ app, notify, onUpdated, onDeleted }) {
       notify(`${app.name} retiré du catalogue.`, 'info')
     } catch (err) {
       notify(err.message || 'Erreur lors de la suppression.', 'danger')
+    }
+  }
+
+  const status = STATUS[app.status] || STATUS.draft
+
+  const handleDeploy = async () => {
+    try {
+      const res = await api.deployApps()
+      notify(res?.message || `Déploiement de ${app.name} déclenché.`, 'success')
+    } catch (err) {
+      notify(err.message || 'Erreur lors du déploiement.', 'danger')
     }
   }
 
