@@ -45,9 +45,9 @@ export default function SoftwarePanel({ notify, search, onSearch, category, onCa
       <div className="software-layout">
         {rows.length === 0 ? (
           <EmptyState
-            icon="search"
-            title="Aucune application"
-            description="Aucune application ne correspond à cette recherche."
+            icon="package"
+            title="Aucun logiciel déployé"
+            description="Aucun logiciel réel n'est encore configuré. Cliquez sur « Ajouter un logiciel » pour installer une application depuis le Store."
             compact
           />
         ) : (

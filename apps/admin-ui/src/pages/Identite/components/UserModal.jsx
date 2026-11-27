@@ -12,7 +12,7 @@ export default function UserModal({ open, onClose, notify }) {
       footer={
         <>
           <Button onClick={onClose}>Annuler</Button>
-          <Button variant="primary" icon="check" onClick={() => { onClose(); notify('Utilisateur créé (simulation).', 'success') }}>Créer le compte</Button>
+          <Button variant="primary" icon="check" onClick={() => { onClose(); notify('En attente de branchement direct sur cette vue (utilisez la page Utilisateurs).', 'info') }}>Créer le compte</Button>
         </>
       }
     >

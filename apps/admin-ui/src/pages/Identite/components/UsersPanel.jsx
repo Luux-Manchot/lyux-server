@@ -49,9 +49,9 @@ export default function UsersPanel({ notify, search, onSearch, roleFilter, onRol
               align: 'right',
               render: (user) => (
                 <div className="row-actions">
-                  <IconButton icon="pencil" label={`Modifier ${user.username}`} onClick={() => notify('Modification simulée.', 'info')} />
-                  <IconButton icon="key" label={`Réinitialiser le mot de passe de ${user.username}`} onClick={() => notify(`Mot de passe de ${user.username} réinitialisé (simulation).`, 'success')} />
-                  <IconButton icon="trash" label={`Supprimer ${user.username}`} onClick={() => notify('Suppression simulée.', 'warning')} />
+                  <IconButton icon="pencil" label={`Modifier ${user.username}`} onClick={() => notify('Action en attente de branchement sur cette vue (utilisez Utilisateurs).', 'info')} />
+                  <IconButton icon="key" label={`Réinitialiser le mot de passe de ${user.username}`} onClick={() => notify('Réinitialisation en attente de branchement sur cette vue (utilisez Utilisateurs).', 'info')} />
+                  <IconButton icon="trash" label={`Supprimer ${user.username}`} onClick={() => notify('Suppression en attente de branchement sur cette vue (utilisez Utilisateurs).', 'info')} />
                 </div>
               ),
             },
