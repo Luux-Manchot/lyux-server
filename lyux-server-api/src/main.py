@@ -1142,17 +1142,78 @@ APPS_CATALOG = {
 
 class AppCreateRequest(BaseModel):
     name: str
-    package: str
+    package: Optional[str] = None
     category: str = "general"
     description: str = ""
     icon: str = "📦"
-    allowed_groups: List[str] = ["eleves", "enseignants"]
+    allowed_groups: Optional[List[str]] = None
+    allowed_roles: Optional[List[str]] = None
     auto_update: bool = True
+    deployed: bool = True
+    version: str = "latest"
+    target: str = "Tous les postes"
+    source: str = "Dépôt LyuX"
+    link: str = ""
+    launch_args: str = ""
 
 class AppUpdateRequest(BaseModel):
     allowed_groups: Optional[List[str]] = None
+    allowed_roles: Optional[List[str]] = None
     auto_update: Optional[bool] = None
     deployed: Optional[bool] = None
+
+_ROLE_GROUP_ALIASES = {
+    "eleve": {"eleve", "eleves"},
+    "eleves": {"eleve", "eleves"},
+    "prof": {"prof", "enseignant", "enseignants"},
+    "enseignant": {"prof", "enseignant", "enseignants"},
+    "enseignants": {"prof", "enseignant", "enseignants"},
+    "viesco": {"viesco", "vie_scolaire"},
+    "administration": {"administration", "direction"},
+    "admin": {"admin", "techniciens"},
+}
+
+def _apps_state_path() -> str:
+    return os.getenv(
+        "LYUX_APPS_STATE_PATH",
+        str(Path(__file__).resolve().parent.parent / "data" / "apps_state.json"),
+    )
+
+def save_apps_state():
+    path = _apps_state_path()
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(APPS_CATALOG, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+def load_apps_state():
+    path = _apps_state_path()
+    if not os.path.exists(path):
+        return
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict) and data:
+            APPS_CATALOG.clear()
+            APPS_CATALOG.update(data)
+    except Exception:
+        pass
+
+load_apps_state()
+
+def _is_role_allowed_for_app(app_entry: Dict[str, Any], role: Optional[str]) -> bool:
+    if not role:
+        return True
+    r_low = role.strip().lower()
+    if r_low == "admin":
+        return True
+    allowed = [str(x).strip().lower() for x in (app_entry.get("allowed_roles") or app_entry.get("allowed_groups") or [])]
+    if not allowed or "all" in allowed or "tous" in allowed:
+        return True
+    aliases = _ROLE_GROUP_ALIASES.get(r_low, {r_low})
+    return any(a in allowed for a in aliases)
 
 @app.get("/api/v1/apps")
 def get_apps():
@@ -1160,38 +1221,54 @@ def get_apps():
 
 @app.post("/api/v1/apps")
 def add_app(req: AppCreateRequest):
-    app_id = req.package.strip().lower().replace(" ", "-")
+    pkg = (req.package or req.name).strip().lower().replace(" ", "-")
+    app_id = pkg
+    roles = req.allowed_roles if req.allowed_roles is not None else (req.allowed_groups or ["eleve", "prof", "admin"])
     APPS_CATALOG[app_id] = {
         "id": app_id,
         "name": req.name.strip(),
-        "package": req.package.strip(),
+        "package": pkg,
         "category": req.category,
         "icon": req.icon,
         "description": req.description,
-        "allowed_groups": req.allowed_groups,
+        "allowed_roles": roles,
+        "allowed_groups": req.allowed_groups if req.allowed_groups is not None else roles,
         "auto_update": req.auto_update,
-        "deployed": True,
-        "version": "latest"
+        "deployed": req.deployed,
+        "version": req.version,
+        "target": req.target,
+        "source": req.source,
+        "link": req.link,
+        "launch_args": req.launch_args,
     }
+    save_apps_state()
     return {"success": True, "app": APPS_CATALOG[app_id]}
 
 @app.put("/api/v1/apps/{app_id}")
 def update_app(app_id: str, req: AppUpdateRequest):
     if app_id not in APPS_CATALOG:
         raise HTTPException(status_code=404, detail="Logiciel non trouvé")
-    app = APPS_CATALOG[app_id]
+    app_entry = APPS_CATALOG[app_id]
+    if req.allowed_roles is not None:
+        app_entry["allowed_roles"] = req.allowed_roles
+        if req.allowed_groups is None:
+            app_entry["allowed_groups"] = req.allowed_roles
     if req.allowed_groups is not None:
-        app["allowed_groups"] = req.allowed_groups
+        app_entry["allowed_groups"] = req.allowed_groups
+        if req.allowed_roles is None:
+            app_entry["allowed_roles"] = req.allowed_groups
     if req.auto_update is not None:
-        app["auto_update"] = req.auto_update
+        app_entry["auto_update"] = req.auto_update
     if req.deployed is not None:
-        app["deployed"] = req.deployed
-    return {"success": True, "app": app}
+        app_entry["deployed"] = req.deployed
+    save_apps_state()
+    return {"success": True, "app": app_entry}
 
 @app.delete("/api/v1/apps/{app_id}")
 def delete_app(app_id: str):
     if app_id in APPS_CATALOG:
         del APPS_CATALOG[app_id]
+        save_apps_state()
         return {"success": True, "message": "Logiciel retiré du catalogue"}
     raise HTTPException(status_code=404, detail="Logiciel non trouvé")
 
@@ -1200,15 +1277,20 @@ def deploy_apps():
     return {
         "success": True,
         "message": "Ordre de déploiement et mise à jour diffusé aux postes clients.",
-        "deployed_count": sum(1 for a in APPS_CATALOG.values() if a["deployed"])
+        "deployed_count": sum(1 for a in APPS_CATALOG.values() if a.get("deployed"))
     }
 
 @app.get("/api/v1/apps/client")
-def get_client_apps():
-    """Endpoint interrogé par les postes clients pour savoir quels paquets installer et quels groupes ont accès."""
+def get_client_apps(role: Optional[str] = None):
+    """Endpoint interrogé par les postes clients pour savoir quels paquets installer et quels rôles ont accès."""
+    items = []
+    for entry in APPS_CATALOG.values():
+        item = dict(entry)
+        item["authorized"] = _is_role_allowed_for_app(entry, role)
+        items.append(item)
     return {
         "cache_proxy": "http://192.168.10.1:3142",
-        "apps": list(APPS_CATALOG.values())
+        "apps": items
     }
 
 CLIENT_STORAGE_REPORTS = {}

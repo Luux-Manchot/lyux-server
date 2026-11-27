@@ -59,9 +59,12 @@ export default function Logiciels({ notify }) {
     const payload = {
       id,
       name: values.name,
+      package: values.package || id,
       category: values.category,
       version: values.version,
       target: values.target,
+      allowed_roles: values.allowedRoles || ['eleve', 'prof', 'admin'],
+      allowed_groups: values.allowedRoles || ['eleve', 'prof', 'admin'],
       source: values.source || 'Dépôt LyuX',
       link: values.link || '',
       launch_args: values.launchArgs || '',

@@ -50,6 +50,11 @@ export default function SoftwareInfo({ app, notify }) {
         <KeyValue label="Version" value={app.version || '—'} mono />
         <KeyValue label="Format" value={app.format || 'Paquet .deb'} />
         <KeyValue label="Source" value={app.source || 'Dépôt LyuX'} />
+        <KeyValue label="Paquet Debian" value={app.package || app.id} mono />
+        <KeyValue
+          label="Rôles autorisés"
+          value={(app.allowed_roles || app.allowed_groups || ['Tous']).join(', ')}
+        />
         <KeyValue label="Public cible" value={app.target || 'Tous les postes'} />
         {app.link && <KeyValue label="Lien du projet" value={<span className="mono software-link" title={app.link}>{app.link}</span>} />}
         {app.license && <KeyValue label="Licence" value={app.license} mono />}

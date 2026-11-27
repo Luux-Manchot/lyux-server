@@ -8,21 +8,40 @@ const SOURCES = [
   { value: 'Dépôt Debian', label: 'Dépôt Debian' },
 ]
 
+const AVAILABLE_ROLES = [
+  { id: 'eleve', label: 'Élèves' },
+  { id: 'prof', label: 'Enseignants' },
+  { id: 'viesco', label: 'Vie scolaire' },
+  { id: 'administration', label: 'Administration' },
+  { id: 'admin', label: 'Admins' },
+]
+
 const SIMULATED_VERSION = '2.1.0'
 
 export default function SoftwareModal({ open, onClose, notify, onAdd, categories = [] }) {
   const initialForm = {
     name: '',
+    package: '',
     link: '',
     source: 'Site officiel',
     version: '',
     category: categories[0] || 'Bureautique',
     target: 'Tous les postes',
+    allowedRoles: ['eleve', 'prof', 'admin'],
     launchArgs: '',
   }
   const [form, setForm] = useState(initialForm)
 
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }))
+  const toggleRole = (roleId) => {
+    setForm((current) => {
+      const exists = current.allowedRoles.includes(roleId)
+      const next = exists
+        ? current.allowedRoles.filter((r) => r !== roleId)
+        : [...current.allowedRoles, roleId]
+      return { ...current, allowedRoles: next }
+    })
+  }
 
   const close = () => {
     setForm({ ...initialForm })
@@ -46,8 +65,10 @@ export default function SoftwareModal({ open, onClose, notify, onAdd, categories
     onAdd({
       ...form,
       name: form.name.trim(),
+      package: form.package.trim(),
       link: form.link.trim(),
       target: form.target.trim() || 'Tous les postes',
+      allowedRoles: form.allowedRoles.length ? form.allowedRoles : ['eleve', 'prof', 'admin'],
       version: form.version.trim() || SIMULATED_VERSION,
       launchArgs: form.launchArgs.trim(),
     })
@@ -71,6 +92,23 @@ export default function SoftwareModal({ open, onClose, notify, onAdd, categories
       <div className="form-stack">
         <FormField label="Nom de l’application">
           <input value={form.name} onChange={(event) => update('name', event.target.value)} placeholder="Ex. Inkscape" />
+        </FormField>
+        <FormField label="Paquet Debian (.deb)" hint="Nom du paquet apt (laissé vide = déduit du nom).">
+          <input value={form.package} onChange={(event) => update('package', event.target.value)} placeholder="Ex. inkscape" />
+        </FormField>
+        <FormField label="Rôles autorisés" hint="Seuls les rôles cochés verront et pourront lancer cette application.">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', paddingTop: '4px' }}>
+            {AVAILABLE_ROLES.map((r) => (
+              <label key={r.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={form.allowedRoles.includes(r.id)}
+                  onChange={() => toggleRole(r.id)}
+                />
+                <span>{r.label}</span>
+              </label>
+            ))}
+          </div>
         </FormField>
         <FormField label="Lien du logiciel" hint="Adresse du site officiel ou de la page de téléchargement.">
           <input type="url" value={form.link} onChange={(event) => update('link', event.target.value)} placeholder="https://exemple.fr/logiciel" />
