@@ -1,13 +1,41 @@
-FROM debian:trixie-slim
-
+FROM golang:1.25-bookworm AS proto-go-builder
 ARG BOR_VERSION=0.10.1
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl krb5-user \
-    && curl -fsSL -o /tmp/bor-server.deb "https://github.com/VuteTech/bor/releases/download/v${BOR_VERSION}/bor-server_${BOR_VERSION}_amd64.deb" \
-    && apt-get install -y --no-install-recommends /tmp/bor-server.deb \
-    && rm -f /tmp/bor-server.deb \
-    && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p /var/lib/bor/pki /etc/bor
+ARG PROTOC_VERSION=34.1
+RUN apt-get update && apt-get install -y --no-install-recommends curl unzip git ca-certificates \
+    && curl -fsSL -o /tmp/protoc.zip "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip" \
+    && unzip -q /tmp/protoc.zip -d /usr/local \
+    && rm -f /tmp/protoc.zip \
+    && rm -rf /var/lib/apt/lists/*
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest \
+    && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+RUN git clone --depth 1 --branch "v${BOR_VERSION}" https://github.com/VuteTech/bor.git /src
+RUN mkdir -p /out/go && protoc --go_out=/out/go --go_opt=paths=source_relative --go-grpc_out=/out/go --go-grpc_opt=paths=source_relative -I /src/proto/policy -I /src/proto/bor /src/proto/policy/*.proto
 
+FROM node:22-bookworm AS frontend-builder
+COPY --from=proto-go-builder /usr/local/bin/protoc /usr/local/bin/protoc
+COPY --from=proto-go-builder /usr/local/include/ /usr/local/include/
+COPY --from=proto-go-builder /src/proto/ /proto/
+COPY --from=proto-go-builder /src/server/web/frontend/ /opt/app-root/src/
+WORKDIR /opt/app-root/src
+RUN npm ci --ignore-scripts \
+    && mkdir -p src/generated/proto \
+    && protoc --plugin=node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=src/generated/proto --ts_proto_opt=onlyTypes=true,snakeToCamel=false,outputServices=false -I /proto/policy -I /proto/bor /proto/policy/*.proto \
+    && npm run build
+
+FROM golang:1.26-bookworm AS server-builder
+ARG BOR_VERSION=0.10.1
+WORKDIR /app
+COPY --from=proto-go-builder /src/server/go.mod /src/server/go.sum ./
+RUN go mod download
+COPY --from=proto-go-builder /src/server/ ./
+COPY --from=proto-go-builder /out/go/ ./pkg/grpc/policy/
+COPY --from=frontend-builder /opt/app-root/static/ ./web/static/
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v1 go build -ldflags="-s -w -X main.Version=${BOR_VERSION}" -o /usr/local/bin/bor-server ./cmd/server
+
+FROM debian:trixie-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates krb5-user \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /var/lib/bor/pki/ui /var/lib/bor/acme /etc/bor
+COPY --from=server-builder /usr/local/bin/bor-server /usr/bin/bor-server
 EXPOSE 8443 8444 9090
 ENTRYPOINT ["/usr/bin/bor-server"]
