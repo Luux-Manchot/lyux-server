@@ -184,14 +184,18 @@ class ReleaseRegistry:
                     size = int(art.get("size", 0))
                 if len(sha) != 64 or size <= 0:
                     return False, f"Empreinte SHA-256 ou taille invalide pour {art.get('name', idx)}."
-                norm_artifacts.append({
+                norm_art: Dict[str, Any] = {
                     "id": art.get("id") or f"{rel_id}-art-{idx + 1}",
                     "type": art.get("type", "config"),
                     "name": art.get("name", f"artifact-{idx + 1}"),
                     "url": url,
                     "sha256": sha,
                     "size": size,
-                })
+                }
+                for opt_field in ("package", "flatpak_id", "version", "architecture"):
+                    if art.get(opt_field):
+                        norm_art[opt_field] = str(art[opt_field]).strip()
+                norm_artifacts.append(norm_art)
 
             if not norm_artifacts:
                 default_bytes = f"{rel_id}:{ver}".encode("utf-8")

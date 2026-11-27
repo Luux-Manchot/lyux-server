@@ -11,6 +11,8 @@ __pycache__/
 env/
 venv/
 data/uptime-kuma/*.db
+*.priv.pem
+lyux-server-api/data/keys/*priv*
 
 # Build artifacts (ISO serveur)
 build/

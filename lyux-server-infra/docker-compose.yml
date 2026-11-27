@@ -1,21 +1,66 @@
 services:
+  # --- Initialisation CA interne & Certificat TLS (généré hors Git) ---
+  tls-init:
+    image: alpine:3.20
+    container_name: lyux-tls-init
+    restart: "no"
+    environment:
+      - LYUX_DOMAIN=${LYUX_DOMAIN:-lyux.lan}
+    volumes:
+      - traefik_certs:/certs
+    command:
+      - sh
+      - -ec
+      - |
+        if [ -f /certs/server.crt ] && [ -f /certs/server.key ] && [ -f /certs/ca.crt ]; then
+          exit 0
+        fi
+        apk add --no-cache openssl >/dev/null
+        umask 077
+        openssl genrsa -out /certs/ca.key 4096
+        openssl req -x509 -new -nodes -key /certs/ca.key -sha256 -days 3650 \
+          -subj "/CN=LyuX Internal CA" -out /certs/ca.crt
+        cat > /tmp/san.cnf <<EOF
+        [req]
+        distinguished_name = dn
+        req_extensions = v3_req
+        prompt = no
+        [dn]
+        CN = api.$${LYUX_DOMAIN}
+        [v3_req]
+        subjectAltName = DNS:api.$${LYUX_DOMAIN},DNS:*.$${LYUX_DOMAIN},DNS:$${LYUX_DOMAIN},DNS:lyux-server,DNS:localhost,IP:127.0.0.1
+        EOF
+        openssl genrsa -out /certs/server.key 2048
+        openssl req -new -key /certs/server.key -out /tmp/server.csr -config /tmp/san.cnf
+        openssl x509 -req -in /tmp/server.csr -CA /certs/ca.crt -CAkey /certs/ca.key -CAcreateserial \
+          -out /certs/server.crt -days 825 -sha256 -extensions v3_req -extfile /tmp/san.cnf
+        chmod 600 /certs/ca.key /certs/server.key
+        chmod 644 /certs/ca.crt /certs/server.crt
+
   # --- Reverse Proxy Traefik ---
   traefik:
     image: traefik:v3.1
     container_name: lyux-traefik
     restart: unless-stopped
+    depends_on:
+      tls-init:
+        condition: service_completed_successfully
     command:
       - "--api.insecure=true"
       - "--api.dashboard=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      - "--providers.file.directory=/etc/traefik"
       - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
     ports:
       - "${TRAEFIK_HTTP_PORT:-8088}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
       - "${TRAEFIK_DASHBOARD_PORT:-8888}:8080"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "./configs/traefik:/etc/traefik"
+      - "./configs/traefik:/etc/traefik:ro"
+      - "traefik_certs:/certs:ro"
     networks:
       - lyux-net
 
@@ -37,10 +82,10 @@ services:
     container_name: lyux-glpi-db
     restart: unless-stopped
     environment:
-      MARIADB_ROOT_PASSWORD: ${GLPI_DB_ROOT_PASSWORD:-root_secret_pass}
+      MARIADB_ROOT_PASSWORD: ${GLPI_DB_ROOT_PASSWORD:?GLPI_DB_ROOT_PASSWORD obligatoire}
       MARIADB_DATABASE: ${GLPI_DB_NAME:-glpidb}
       MARIADB_USER: ${GLPI_DB_USER:-glpi}
-      MARIADB_PASSWORD: ${GLPI_DB_PASSWORD:-glpi_secret_pass}
+      MARIADB_PASSWORD: ${GLPI_DB_PASSWORD:?GLPI_DB_PASSWORD obligatoire}
     volumes:
       - glpi_db_data:/var/lib/mysql
     healthcheck:
@@ -68,7 +113,7 @@ services:
       MARIADB_PORT: 3306
       MARIADB_DATABASE: ${GLPI_DB_NAME:-glpidb}
       MARIADB_USER: ${GLPI_DB_USER:-glpi}
-      MARIADB_PASSWORD: ${GLPI_DB_PASSWORD:-glpi_secret_pass}
+      MARIADB_PASSWORD: ${GLPI_DB_PASSWORD:?GLPI_DB_PASSWORD obligatoire}
     volumes:
       - glpi_data:/var/www/html/glpi
     labels:
@@ -94,7 +139,7 @@ services:
       - "${LAM_HTTP_PORT:-8082}:80"
     environment:
       - LAM_LANG=fr_FR
-      - LAM_PASSWORD=${LAM_ADMIN_PASSWORD:-admin_secret_pass}
+      - LAM_PASSWORD=${LAM_ADMIN_PASSWORD:?LAM_ADMIN_PASSWORD obligatoire}
     volumes:
       - lam_data:/var/lib/ldap-account-manager
       - ./configs/lam/config.cfg:/var/lib/ldap-account-manager/config/config.cfg
@@ -145,7 +190,7 @@ services:
       - LYUX_ENV=production
       - LYUX_DOMAIN=${LYUX_DOMAIN:-lyux.lan}
       - GLPI_API_URL=http://glpi/apirest.php
-      - GLPI_USER_TOKEN=${GLPI_USER_TOKEN:-default_token}
+      - GLPI_USER_TOKEN=${GLPI_USER_TOKEN:?GLPI_USER_TOKEN obligatoire}
     ports:
       - "8000:8000"
     volumes:
@@ -154,6 +199,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.api.rule=Host(`api.lyux.lan`)"
       - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.routers.api-https.rule=Host(`api.lyux.lan`)"
+      - "traefik.http.routers.api-https.entrypoints=websecure"
+      - "traefik.http.routers.api-https.tls=true"
       - "traefik.http.services.api.loadbalancer.server.port=8000"
     networks:
       - lyux-net
@@ -203,7 +251,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${BOR_DB_USER:-bor}
-      POSTGRES_PASSWORD: ${BOR_DB_PASSWORD:-bor_secret_pass}
+      POSTGRES_PASSWORD: ${BOR_DB_PASSWORD:?BOR_DB_PASSWORD obligatoire}
       POSTGRES_DB: ${BOR_DB_NAME:-bor}
     volumes:
       - bor_db_data:/var/lib/postgresql/data
@@ -235,7 +283,7 @@ services:
       - DB_HOST=bor-db
       - DB_PORT=5432
       - DB_USER=${BOR_DB_USER:-bor}
-      - DB_PASSWORD=${BOR_DB_PASSWORD:-bor_secret_pass}
+      - DB_PASSWORD=${BOR_DB_PASSWORD:?BOR_DB_PASSWORD obligatoire}
       - DB_NAME=${BOR_DB_NAME:-bor}
       - DB_SSLMODE=disable
       - BOR_ENROLLMENT_PORT=8443
@@ -259,6 +307,7 @@ networks:
     driver: bridge
 
 volumes:
+  traefik_certs:
   apt_cache_data:
   glpi_db_data:
   glpi_data:

@@ -1014,28 +1014,46 @@ def root_redirect(request: Request):
     return HTMLResponse(content=html, status_code=200)
 
 @app.get("/api/v1/auth/sync")
-def get_auth_sync():
+def get_auth_sync(authorization: Optional[str] = Header(default=None)):
     """
-    Exporte en temps réel tous les comptes scolaires (élèves, profs, administration),
-    leurs identifiants, hashs de mot de passe et groupes pour synchronisation automatique
-    avec les postes clients du réseau.
+    Exporte les comptes scolaires non secrets (identifiants et groupes)
+    pour les administrateurs authentifiés uniquement. Ne lit jamais /etc/shadow
+    et ne renvoie aucun hash de mot de passe.
     """
+    from admin_routes import _require_permission
+    _require_permission(authorization, "users.view")
     try:
-        with open("/etc/passwd", "r") as f:
-            passwd = [l.strip() for l in f if len(l.split(":")) >= 7 and int(l.split(":")[2]) >= 1000 and l.split(":")[0] not in ["nobody", "lyux-admin"]]
-        with open("/etc/shadow", "r") as f:
-            shadow_map = {l.split(":")[0]: l.strip() for l in f}
-        school_usernames = [l.split(":")[0] for l in passwd]
-        school_shadow = [shadow_map[u] for u in school_usernames if u in shadow_map]
-        with open("/etc/group", "r") as f:
-            groups = [l.strip() for l in f if int(l.split(":")[2]) >= 1000 or l.split(":")[0] in ["eleves", "enseignants", "administration", "direction", "viescolaire", "viesco"]]
+        passwd: List[str] = []
+        if os.path.exists("/etc/passwd"):
+            with open("/etc/passwd", "r", encoding="utf-8") as f:
+                passwd = [
+                    l.strip()
+                    for l in f
+                    if len(l.split(":")) >= 7
+                    and l.split(":")[2].isdigit()
+                    and int(l.split(":")[2]) >= 1000
+                    and l.split(":")[0] not in ["nobody", "lyux-admin"]
+                ]
+        groups: List[str] = []
+        if os.path.exists("/etc/group"):
+            with open("/etc/group", "r", encoding="utf-8") as f:
+                groups = [
+                    l.strip()
+                    for l in f
+                    if len(l.split(":")) >= 3
+                    and (
+                        (l.split(":")[2].isdigit() and int(l.split(":")[2]) >= 1000)
+                        or l.split(":")[0] in ["eleves", "enseignants", "administration", "direction", "viescolaire", "viesco"]
+                    )
+                ]
         return {
             "users": passwd,
-            "shadow": school_shadow,
-            "groups": groups
+            "groups": groups,
         }
-    except Exception as e:
-        return {"error": str(e), "users": [], "shadow": [], "groups": []}
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erreur interne lors de la lecture des comptes.")
 
 # ==============================================================================
 # GESTION CENTRALISÉE DES LOGICIELS (DISCOVER SERVEUR / CLIENTS)

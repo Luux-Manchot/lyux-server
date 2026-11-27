@@ -205,10 +205,15 @@ class Ed25519KeyManager:
     def sign_manifest(self, manifest: Dict[str, Any], key_id: Optional[str] = None) -> Tuple[str, str]:
         kr = self._load_keyring()
         kid = key_id or kr["active_key_id"]
-        priv_path = self._priv_path(kid)
-        if not priv_path.exists():
-            raise RuntimeError(f"Clé privée introuvable : {kid}")
-        priv = serialization.load_pem_private_key(priv_path.read_bytes(), password=None)
+        env_priv_pem = os.getenv("LYUX_RELEASE_PRIVATE_KEY_PEM", "").strip()
+        if env_priv_pem:
+            priv_bytes = env_priv_pem.encode("utf-8")
+        else:
+            priv_path = self._priv_path(kid)
+            if not priv_path.exists():
+                raise RuntimeError(f"Clé privée introuvable : {kid}")
+            priv_bytes = priv_path.read_bytes()
+        priv = serialization.load_pem_private_key(priv_bytes, password=None)
         sig_bytes = priv.sign(canonical_manifest_bytes(manifest))
         sig_b64 = base64.urlsafe_b64encode(sig_bytes).decode("ascii").rstrip("=")
         return sig_b64, kid
