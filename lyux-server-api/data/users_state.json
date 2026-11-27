@@ -1,0 +1,163 @@
+[
+  {
+    "username": "lyux-admin",
+    "display_name": "Administrateur Système",
+    "role": "admin",
+    "classe": "IT / Maintenance",
+    "password": "LyuxAdmin2026!",
+    "room": "ALL",
+    "app": "Console Système & Cockpit"
+  },
+  {
+    "username": "lyux.eleve",
+    "display_name": "Élève Démo (LyuX)",
+    "role": "eleve",
+    "classe": "1G1 (B204)",
+    "password": "Eleve2026!",
+    "room": "B204",
+    "app": "Thonny IDE Python & Kiosk"
+  },
+  {
+    "username": "lyux.prof",
+    "display_name": "Professeur Démo (LyuX)",
+    "role": "enseignant",
+    "classe": "Maths / NSI",
+    "password": "Prof2026!",
+    "room": "B204",
+    "app": "Veyon Master (Supervision)"
+  },
+  {
+    "username": "lucas.martin",
+    "display_name": "Lucas Martin",
+    "role": "eleve",
+    "classe": "1G1 (B204)",
+    "password": "Eleve2026!",
+    "room": "B204",
+    "app": "Thonny IDE Python"
+  },
+  {
+    "username": "emma.bernard",
+    "display_name": "Emma Bernard",
+    "role": "eleve",
+    "classe": "1G1 (B204)",
+    "password": "Eleve2026!",
+    "room": "B204",
+    "app": "LibreOffice Writer"
+  },
+  {
+    "username": "hugo.dubois",
+    "display_name": "Hugo Dubois",
+    "role": "eleve",
+    "classe": "1G2 (S102)",
+    "password": "Eleve2026!",
+    "room": "S102",
+    "app": "Avogadro 3D Chimie"
+  },
+  {
+    "username": "lea.thomas",
+    "display_name": "Léa Thomas",
+    "role": "eleve",
+    "classe": "1G2 (S102)",
+    "password": "Eleve2026!",
+    "room": "S102",
+    "app": "Tracker Mécanique"
+  },
+  {
+    "username": "thomas.durand",
+    "display_name": "M. Durand",
+    "role": "enseignant",
+    "classe": "Maths / NSI",
+    "password": "Prof2026!",
+    "room": "B204",
+    "app": "Veyon Master (Supervision)"
+  },
+  {
+    "username": "sophie.leroy",
+    "display_name": "Mme. Leroy",
+    "role": "enseignant",
+    "classe": "Physique / SVT",
+    "password": "Prof2026!",
+    "room": "S102",
+    "app": "Veyon Master (Supervision)"
+  },
+  {
+    "username": "claire.viesco",
+    "display_name": "Claire Vie-Scolaire",
+    "role": "viesco",
+    "classe": "Vie Scolaire",
+    "password": "Viesco2026!",
+    "room": "VIESCO",
+    "app": "Pronote & Portails"
+  },
+  {
+    "username": "alain.direction",
+    "display_name": "Alain Direction",
+    "role": "administration",
+    "classe": "Direction",
+    "password": "Admin2026!",
+    "room": "ADMIN",
+    "app": "GLPI & Supervision"
+  },
+  {
+    "username": "lyux-admin",
+    "display_name": "Admin LyuX",
+    "role": "technicien",
+    "classe": "IT / Support",
+    "password": "LyuxDeploy2026!",
+    "room": "SERVEUR",
+    "app": "Terminal & Ansible"
+  },
+  {
+    "username": "j.multirole",
+    "display_name": "Jean MULTIROLE",
+    "role": "technicien",
+    "roles": [
+      "enseignant",
+      "technicien"
+    ],
+    "classe": "T-NSI",
+    "subgroup": "-",
+    "password": "Pass3721!",
+    "room": "B204",
+    "app": "Veyon Master"
+  },
+  {
+    "username": "l.martin",
+    "display_name": "Lucas MARTIN",
+    "role": "eleve",
+    "roles": [
+      "eleve"
+    ],
+    "classe": "2NDE1",
+    "subgroup": "-",
+    "password": "Pass2921!",
+    "room": "B204",
+    "app": "Thonny IDE"
+  },
+  {
+    "username": "p.curie",
+    "display_name": "Pierre CURIE",
+    "role": "enseignant",
+    "roles": [
+      "enseignant"
+    ],
+    "classe": "T-NSI",
+    "subgroup": "-",
+    "password": "Pass9535!",
+    "room": "B204",
+    "app": "Veyon Master"
+  },
+  {
+    "username": "camille.dupont",
+    "display_name": "Camille DUPONT",
+    "role": "eleve",
+    "roles": [
+      "eleve"
+    ],
+    "classe": "2GT1",
+    "subgroup": "-",
+    "password": "TestPassword2026!",
+    "room": "B204",
+    "app": "Thonny IDE"
+  }
+]

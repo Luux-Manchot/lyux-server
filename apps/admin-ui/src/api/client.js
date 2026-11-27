@@ -236,6 +236,14 @@ export const api = {
     }),
   checkUpdates: () => apiRequest('/api/v1/system/updates/check'),
   applyUpdates: () => apiRequest('/api/v1/system/updates/apply', { method: 'POST' }),
+  getUpdatesPolicy: () => apiRequest('/api/v1/updates/policy'),
+  saveUpdatesPolicy: (payload) =>
+    apiRequest('/api/v1/updates/policy', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  checkUpdatesPolicyLatest: () =>
+    apiRequest('/api/v1/updates/policy/check', { method: 'POST' }),
 
   // Réglages
   getSettings: () => apiRequest('/api/v1/system/settings'),

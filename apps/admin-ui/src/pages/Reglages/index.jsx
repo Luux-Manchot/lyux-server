@@ -77,7 +77,7 @@ export default function Reglages({ notify }) {
       />
 
       {tab === 'general' && <GeneralTab form={form} set={set} />}
-      {tab === 'mises-a-jour' && <UpdatesTab form={form} set={set} />}
+      {tab === 'mises-a-jour' && <UpdatesTab form={form} set={set} notify={notify} />}
       {tab === 'securite' && (
         <SecurityTab
           form={form}

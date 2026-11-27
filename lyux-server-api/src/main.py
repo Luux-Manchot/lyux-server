@@ -1409,6 +1409,244 @@ def apply_server_update():
         "version": SYSTEM_SETTINGS["lyux_version"]
     }
 
+
+# ==============================================================================
+# POLITIQUE DE MISES À JOUR PAR COMPOSANT (DEBIAN / KDE / LYUX)
+# ==============================================================================
+
+_UPDATES_POLICY_PATH = Path(
+    os.environ.get(
+        "LYUX_UPDATES_POLICY_PATH",
+        str(Path(__file__).resolve().parent.parent / "data" / "updates_policy.json"),
+    )
+)
+
+
+def _default_updates_policy() -> Dict[str, Any]:
+    return {
+        "debian": {
+            "label": "Debian",
+            "pin_package": "base-files",
+            "selected_version": "",
+            "latest_version": "",
+            "latest_checked_at": "",
+            "latest_error": "",
+            "source": "deb.debian.org (trixie)",
+        },
+        "kde": {
+            "label": "KDE Plasma",
+            "pin_package": "plasma-desktop",
+            "selected_version": "",
+            "latest_version": "",
+            "latest_checked_at": "",
+            "latest_error": "",
+            "source": "Debian trixie (plasma-desktop)",
+        },
+        "lyux": {
+            "label": "LyuX OS",
+            "pin_package": "lyux-desktop-core",
+            "selected_version": "",
+            "latest_version": "",
+            "latest_checked_at": "",
+            "latest_error": "",
+            "source": "Dépôt APT LyuX / GitHub",
+        },
+        "auto_enforce": True,
+        "updated_at": "",
+    }
+
+
+def _load_updates_policy() -> Dict[str, Any]:
+    policy = _default_updates_policy()
+    if _UPDATES_POLICY_PATH.exists():
+        try:
+            stored = json.loads(_UPDATES_POLICY_PATH.read_text(encoding="utf-8"))
+            if isinstance(stored, dict):
+                for key in ("debian", "kde", "lyux"):
+                    if isinstance(stored.get(key), dict):
+                        policy[key].update(stored[key])
+                if "auto_enforce" in stored:
+                    policy["auto_enforce"] = bool(stored["auto_enforce"])
+                if "updated_at" in stored:
+                    policy["updated_at"] = str(stored["updated_at"])
+        except (OSError, json.JSONDecodeError):
+            pass
+    return policy
+
+
+def _save_updates_policy(policy: Dict[str, Any]) -> None:
+    _UPDATES_POLICY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _UPDATES_POLICY_PATH.write_text(
+        json.dumps(policy, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+UPDATE_POLICY: Dict[str, Any] = _load_updates_policy()
+
+
+def _http_get_text(url: str, timeout: float = 5.0) -> str:
+    import urllib.request
+    req = urllib.request.Request(url, headers={"User-Agent": "LyuX-Server/0.6"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.read().decode("utf-8", errors="replace")
+
+
+def _fetch_latest_debian_version() -> tuple[str, str]:
+    try:
+        raw = _http_get_text("https://deb.debian.org/debian/dists/trixie/Release")
+        for line in raw.splitlines():
+            if line.startswith("Version:"):
+                ver = line.split(":", 1)[1].strip()
+                if ver:
+                    return ver, ""
+            if line.startswith("Codename:"):
+                codename = line.split(":", 1)[1].strip()
+                if codename == "trixie":
+                    return "13 (trixie)", ""
+        return "", "Version introuvable dans Release"
+    except Exception as exc:
+        return "", f"Inaccessible ({exc})"
+
+
+def _fetch_latest_kde_version() -> tuple[str, str]:
+    try:
+        raw = _http_get_text("https://sources.debian.org/api/src/plasma-desktop/")
+        data = json.loads(raw)
+        versions = data.get("versions") or []
+        for entry in versions:
+            suites = entry.get("suites") or []
+            if "trixie" in suites or "testing" in suites:
+                ver = str(entry.get("version") or "").strip()
+                if ver:
+                    return ver, ""
+        if versions:
+            ver = str(versions[0].get("version") or "").strip()
+            if ver:
+                return ver, ""
+        return "", "Aucune version trouvée"
+    except Exception as exc:
+        return "", f"Inaccessible ({exc})"
+
+
+def _fetch_latest_lyux_version() -> tuple[str, str]:
+    local_ver = ""
+    pool_dir = Path(__file__).resolve().parent.parent / "data" / "apt-repo" / "pool" / "main"
+    if pool_dir.exists():
+        debs = sorted(pool_dir.glob("lyux-desktop-core_*_all.deb"))
+        if debs:
+            name = debs[-1].name
+            local_ver = name.removeprefix("lyux-desktop-core_").removesuffix("_all.deb")
+    try:
+        raw = _http_get_text("https://api.github.com/repos/Luux-Manchot/lyux-desktop/releases?per_page=1")
+        releases = json.loads(raw)
+        if isinstance(releases, list) and releases:
+            tag = str(releases[0].get("tag_name") or "").lstrip("v").strip()
+            if tag:
+                return tag, ""
+    except Exception as exc:
+        if local_ver:
+            return local_ver, f"Dépôt local uniquement (GitHub inaccessible : {exc})"
+        return "", f"Inaccessible ({exc})"
+    return local_ver, "" if local_ver else "Aucune release trouvée"
+
+
+def _build_apt_preferences(policy: Dict[str, Any]) -> str:
+    """Génère /etc/apt/preferences.d/lyux-policy.pref pour bloquer les paquets aux versions validées."""
+    blocks = [
+        "# Généré automatiquement par LyuX Server — ne pas modifier manuellement",
+    ]
+    for key in ("debian", "kde", "lyux"):
+        entry = policy.get(key) or {}
+        pkg = str(entry.get("pin_package") or "").strip()
+        ver = str(entry.get("selected_version") or "").strip()
+        if not pkg or not ver:
+            continue
+        clean_ver = ver.split()[0]
+        blocks.append(
+            f"Package: {pkg}\n"
+            f"Pin: version {clean_ver}*\n"
+            f"Pin-Priority: 1001"
+        )
+    return "\n\n".join(blocks) + "\n"
+
+
+class ComponentPolicyPatch(BaseModel):
+    selected_version: Optional[str] = None
+
+
+class UpdatesPolicyUpdateRequest(BaseModel):
+    debian: Optional[ComponentPolicyPatch] = None
+    kde: Optional[ComponentPolicyPatch] = None
+    lyux: Optional[ComponentPolicyPatch] = None
+    auto_enforce: Optional[bool] = None
+
+
+@app.get("/api/v1/updates/policy")
+def get_updates_policy():
+    """Renvoie la politique de mises à jour 3-composants (Debian, KDE, LyuX)."""
+    return {
+        "policy": UPDATE_POLICY,
+        "apt_preferences": _build_apt_preferences(UPDATE_POLICY),
+    }
+
+
+@app.put("/api/v1/updates/policy")
+@app.post("/api/v1/updates/policy")
+def update_updates_policy(req: UpdatesPolicyUpdateRequest):
+    """Enregistre les versions cibles sélectionnées par l'administrateur."""
+    for key in ("debian", "kde", "lyux"):
+        patch = getattr(req, key, None)
+        if patch is not None and patch.selected_version is not None:
+            UPDATE_POLICY[key]["selected_version"] = patch.selected_version.strip()
+    if req.auto_enforce is not None:
+        UPDATE_POLICY["auto_enforce"] = bool(req.auto_enforce)
+    UPDATE_POLICY["updated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+    _save_updates_policy(UPDATE_POLICY)
+    return {
+        "success": True,
+        "policy": UPDATE_POLICY,
+        "apt_preferences": _build_apt_preferences(UPDATE_POLICY),
+    }
+
+
+@app.post("/api/v1/updates/policy/check")
+def refresh_updates_policy_latest():
+    """Interroge les sources réelles (Debian, KDE, LyuX) pour connaître les dernières versions existantes."""
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+    fetchers = {
+        "debian": _fetch_latest_debian_version,
+        "kde": _fetch_latest_kde_version,
+        "lyux": _fetch_latest_lyux_version,
+    }
+    for key, fn in fetchers.items():
+        ver, err = fn()
+        if ver:
+            UPDATE_POLICY[key]["latest_version"] = ver
+        UPDATE_POLICY[key]["latest_checked_at"] = now
+        UPDATE_POLICY[key]["latest_error"] = err
+    _save_updates_policy(UPDATE_POLICY)
+    return {
+        "success": True,
+        "policy": UPDATE_POLICY,
+        "apt_preferences": _build_apt_preferences(UPDATE_POLICY),
+    }
+
+
+@app.get("/api/v1/client/updates/policy")
+def get_client_updates_policy():
+    """Endpoint interrogé par les postes clients et l'app Paramètres KDE."""
+    lyux_ver = str(UPDATE_POLICY["lyux"].get("selected_version") or "").strip()
+    deb_url = f"/api/v1/apt-repo/pool/main/lyux-desktop-core_{lyux_ver}_all.deb" if lyux_ver else ""
+    return {
+        "debian": UPDATE_POLICY["debian"],
+        "kde": UPDATE_POLICY["kde"],
+        "lyux": {**UPDATE_POLICY["lyux"], "deb_url": deb_url},
+        "auto_enforce": UPDATE_POLICY.get("auto_enforce", True),
+        "updated_at": UPDATE_POLICY.get("updated_at", ""),
+        "apt_preferences": _build_apt_preferences(UPDATE_POLICY),
+    }
+
 from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse, RedirectResponse, Response
 from release_registry import ReleaseRegistry
 from apt_repo import SignedAptRepository
