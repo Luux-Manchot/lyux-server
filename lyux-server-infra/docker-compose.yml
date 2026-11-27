@@ -196,6 +196,63 @@ services:
     networks:
       - lyux-net
 
+  # --- Base de données Bor (PostgreSQL) ---
+  bor-db:
+    image: postgres:17-alpine
+    container_name: lyux-bor-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${BOR_DB_USER:-bor}
+      POSTGRES_PASSWORD: ${BOR_DB_PASSWORD:-bor_secret_pass}
+      POSTGRES_DB: ${BOR_DB_NAME:-bor}
+    volumes:
+      - bor_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${BOR_DB_USER:-bor} -d ${BOR_DB_NAME:-bor}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lyux-net
+
+  # --- Bor GPO Server (Politiques Linux temps réel) ---
+  bor-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.bor
+      args:
+        BOR_VERSION: ${BOR_VERSION:-0.10.1}
+    container_name: lyux-bor-server
+    restart: unless-stopped
+    depends_on:
+      bor-db:
+        condition: service_healthy
+    ports:
+      - "${BOR_HTTP_PORT:-8089}:8443"
+      - "${BOR_GRPC_PORT:-9091}:8444"
+    environment:
+      - GODEBUG=x509negativeserial=1,x509usefallbackroots=1
+      - DB_HOST=bor-db
+      - DB_PORT=5432
+      - DB_USER=${BOR_DB_USER:-bor}
+      - DB_PASSWORD=${BOR_DB_PASSWORD:-bor_secret_pass}
+      - DB_NAME=${BOR_DB_NAME:-bor}
+      - DB_SSLMODE=disable
+      - BOR_ENROLLMENT_PORT=8443
+      - BOR_POLICY_PORT=8444
+      - BOR_HOSTNAMES=${BOR_HOSTNAMES:-localhost,bor.lyux.lan}
+      - BOR_METRICS_ADDR=127.0.0.1:9090
+    volumes:
+      - bor_pki:/var/lib/bor/pki
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bor.rule=Host(`bor.lyux.lan`)"
+      - "traefik.http.routers.bor.entrypoints=web"
+      - "traefik.http.services.bor.loadbalancer.server.port=8443"
+      - "traefik.http.services.bor.loadbalancer.server.scheme=https"
+    networks:
+      - lyux-net
+
 networks:
   lyux-net:
     name: lyux-internal-network
@@ -208,3 +265,5 @@ volumes:
   lam_data:
   uptime_kuma_data:
   api_data:
+  bor_db_data:
+  bor_pki:

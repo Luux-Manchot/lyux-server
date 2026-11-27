@@ -1256,7 +1256,10 @@ SYSTEM_SETTINGS = {
     "update_available": False,
     "latest_version": "1.0.0",
     "auto_update_clients": True,
-    "apt_cache_enabled": True
+    "apt_cache_enabled": True,
+    "nas_sync_enabled": True,
+    "nas_share_path": "/srv/samba/homes",
+    "desktop_profile_enabled": True,
 }
 
 CLIENT_VERSIONS: Dict[str, Dict[str, Any]] = {

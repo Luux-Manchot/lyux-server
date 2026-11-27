@@ -1,0 +1,13 @@
+FROM debian:trixie-slim
+
+ARG BOR_VERSION=0.10.1
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates curl krb5-user \
+    && curl -fsSL -o /tmp/bor-server.deb "https://github.com/VuteTech/bor/releases/download/v${BOR_VERSION}/bor-server_${BOR_VERSION}_amd64.deb" \
+    && apt-get install -y --no-install-recommends /tmp/bor-server.deb \
+    && rm -f /tmp/bor-server.deb \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /var/lib/bor/pki /etc/bor
+
+EXPOSE 8443 8444 9090
+ENTRYPOINT ["/usr/bin/bor-server"]

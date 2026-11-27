@@ -83,6 +83,19 @@ OFFICIAL_MONITORS = [
         "description": "Gestion de parc informatique et suivi des tickets d'assistance GLPI (port 8085)"
     },
     {
+        "name": "Bor GPO Server",
+        "type": "http",
+        "url": f"https://{TARGET_HOST}:8089",
+        "hostname": None,
+        "port": None,
+        "interval": 60,
+        "retry_interval": 10,
+        "maxretries": 2,
+        "ignore_tls": 1,
+        "accepted_statuscodes_json": json.dumps(["200-399"]),
+        "description": "Console Bor de politiques Linux temps réel (UI 8089 / gRPC 9091)"
+    },
+    {
         "name": "Samba-AD LDAP Directory",
         "type": "port",
         "url": None,
