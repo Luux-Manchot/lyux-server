@@ -1125,8 +1125,8 @@ def get_apps():
 
 @app.post("/api/v1/apps")
 def add_app(req: AppCreateRequest):
-    pkg = (req.package or req.name).strip().lower().replace(" ", "-")
-    app_id = pkg
+    pkg = (req.package or req.name).strip().replace(" ", "-")
+    app_id = pkg.lower()
     roles = req.allowed_roles if req.allowed_roles is not None else (req.allowed_groups or ["eleve", "prof", "admin"])
     APPS_CATALOG[app_id] = {
         "id": app_id,
