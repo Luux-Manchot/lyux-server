@@ -4,7 +4,7 @@ import SoftwareInfo from './SoftwareInfo.jsx'
 
 // La liste de gauche ne contient que le nom des applications : aucun bouton,
 // aucune colonne supplémentaire. La fiche de droite affiche les informations.
-export default function SoftwarePanel({ notify, search, onSearch, category, onCategoryChange, categories, rows, focusId }) {
+export default function SoftwarePanel({ notify, search, onSearch, category, onCategoryChange, categories, rows, focusId, onUpdated, onDeleted }) {
   const [selectedId, setSelectedId] = useState(rows[0]?.id || null)
 
   // Un logiciel ajouté pendant la session devient immédiatement la sélection.
@@ -70,7 +70,7 @@ export default function SoftwarePanel({ notify, search, onSearch, category, onCa
           </div>
         )}
 
-        <SoftwareInfo app={selectedApp} notify={notify} />
+        <SoftwareInfo app={selectedApp} notify={notify} onUpdated={onUpdated} onDeleted={onDeleted} />
       </div>
     </Card>
   )

@@ -1153,6 +1153,7 @@ class AppCreateRequest(BaseModel):
     version: str = "latest"
     target: str = "Tous les postes"
     source: str = "Dépôt LyuX"
+    format: str = "Paquet .deb"
     link: str = ""
     launch_args: str = ""
 
@@ -1238,6 +1239,7 @@ def add_app(req: AppCreateRequest):
         "version": req.version,
         "target": req.target,
         "source": req.source,
+        "format": req.format,
         "link": req.link,
         "launch_args": req.launch_args,
     }
@@ -1288,10 +1290,117 @@ def get_client_apps(role: Optional[str] = None):
         item = dict(entry)
         item["authorized"] = _is_role_allowed_for_app(entry, role)
         items.append(item)
+    peer_caches = [
+        f"http://{m['ip']}:3142"
+        for m in ENROLLED_MACHINES.values()
+        if m.get("status") == "online" and m.get("ip")
+    ]
     return {
         "cache_proxy": "http://192.168.10.1:3142",
-        "apps": items
+        "peer_caches": peer_caches,
+        "fallback_direct": True,
+        "apps": items,
     }
+
+
+_CURATED_STORE_FALLBACK = [
+    {"id": "org.gimp.GIMP", "name": "GIMP", "package": "org.gimp.GIMP", "category": "Création", "source": "Flathub", "format": "Flatpak", "version": "2.10", "description": "Éditeur d'images avancé et retouche photo.", "icon": ""},
+    {"id": "org.videolan.VLC", "name": "VLC", "package": "org.videolan.VLC", "category": "Multimédia", "source": "Flathub", "format": "Flatpak", "version": "3.0", "description": "Lecteur multimédia universel.", "icon": ""},
+    {"id": "org.inkscape.Inkscape", "name": "Inkscape", "package": "org.inkscape.Inkscape", "category": "Création", "source": "Flathub", "format": "Flatpak", "version": "1.3", "description": "Dessin vectoriel SVG professionnel.", "icon": ""},
+    {"id": "org.kde.krita", "name": "Krita", "package": "org.kde.krita", "category": "Création", "source": "Flathub", "format": "Flatpak", "version": "5.2", "description": "Peinture numérique et illustration.", "icon": ""},
+    {"id": "org.libreoffice.LibreOffice", "name": "LibreOffice", "package": "org.libreoffice.LibreOffice", "category": "Bureautique", "source": "Flathub", "format": "Flatpak", "version": "24.8", "description": "Suite bureautique complète (Writer, Calc, Impress).", "icon": ""},
+    {"id": "com.visualstudio.code", "name": "Visual Studio Code", "package": "com.visualstudio.code", "category": "NSI / Dev", "source": "Flathub", "format": "Flatpak", "version": "latest", "description": "Éditeur de code pour Python, Web, C/C++.", "icon": ""},
+    {"id": "org.blender.Blender", "name": "Blender", "package": "org.blender.Blender", "category": "3D / STI2D", "source": "Flathub", "format": "Flatpak", "version": "4.2", "description": "Modélisation, animation et rendu 3D.", "icon": ""},
+    {"id": "org.audacityteam.Audacity", "name": "Audacity", "package": "org.audacityteam.Audacity", "category": "Multimédia", "source": "Flathub", "format": "Flatpak", "version": "3.6", "description": "Enregistrement et montage audio multipiste.", "icon": ""},
+    {"id": "inkscape", "name": "Inkscape (.deb)", "package": "inkscape", "category": "Création", "source": "Dépôt Debian", "format": "Paquet .deb", "version": "Debian 13", "description": "Paquet Debian officiel d'Inkscape.", "icon": ""},
+    {"id": "vlc", "name": "VLC (.deb)", "package": "vlc", "category": "Multimédia", "source": "Dépôt Debian", "format": "Paquet .deb", "version": "Debian 13", "description": "Paquet Debian officiel du lecteur VLC.", "icon": ""},
+]
+
+
+@app.get("/api/v1/apps/store/search")
+def search_app_store(q: str = "", source: str = "all", limit: int = 24):
+    """Recherche en direct dans Flathub (style KDE Discover) et le catalogue APT Debian."""
+    import urllib.request as _urlreq
+
+    query = (q or "").strip()
+    src_filter = (source or "all").strip().lower()
+    results: List[Dict[str, Any]] = []
+
+    if src_filter in ("all", "flathub"):
+        try:
+            if query:
+                req_obj = _urlreq.Request(
+                    "https://flathub.org/api/v2/search",
+                    data=json.dumps({"query": query, "filters": []}).encode("utf-8"),
+                    headers={"Content-Type": "application/json", "User-Agent": "LyuX-Store/1.0"},
+                    method="POST",
+                )
+            else:
+                req_obj = _urlreq.Request(
+                    "https://flathub.org/api/v2/collection/popular?page=1&per_page=18",
+                    headers={"User-Agent": "LyuX-Store/1.0"},
+                )
+            with _urlreq.urlopen(req_obj, timeout=4.0) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            hits = data.get("hits") if isinstance(data, dict) else []
+            for h in (hits or [])[:limit]:
+                app_id = h.get("app_id") or h.get("id") or ""
+                if not app_id:
+                    continue
+                cats = h.get("categories") or []
+                results.append({
+                    "id": app_id,
+                    "name": h.get("name") or app_id,
+                    "package": app_id,
+                    "category": cats[0] if cats else "Flathub",
+                    "source": "Flathub",
+                    "format": "Flatpak",
+                    "version": "Flathub",
+                    "description": h.get("summary") or "",
+                    "icon": h.get("icon") or "",
+                    "link": f"https://flathub.org/apps/{app_id}",
+                })
+        except Exception:
+            pass
+
+    if src_filter in ("all", "apt") and query:
+        try:
+            proc = subprocess.run(
+                ["apt-cache", "search", query],
+                capture_output=True,
+                text=True,
+                timeout=3.0,
+                check=False,
+            )
+            if proc.returncode == 0:
+                for line in proc.stdout.splitlines()[:12]:
+                    if " - " in line:
+                        pkg_name, desc = line.split(" - ", 1)
+                        pkg_clean = pkg_name.strip()
+                        results.append({
+                            "id": pkg_clean,
+                            "name": pkg_clean,
+                            "package": pkg_clean,
+                            "category": "Debian APT",
+                            "source": "Dépôt Debian",
+                            "format": "Paquet .deb",
+                            "version": "Debian 13",
+                            "description": desc.strip(),
+                            "icon": "",
+                            "link": f"https://packages.debian.org/trixie/{pkg_clean}",
+                        })
+        except Exception:
+            pass
+
+    if not results:
+        q_low = query.lower()
+        for item in _CURATED_STORE_FALLBACK:
+            if src_filter != "all" and src_filter not in item["source"].lower() and src_filter not in item["format"].lower():
+                continue
+            if not q_low or q_low in item["name"].lower() or q_low in item["description"].lower() or q_low in item["package"].lower():
+                results.append(dict(item))
+
+    return {"query": query, "source": src_filter, "items": results[:limit]}
 
 CLIENT_STORAGE_REPORTS = {}
 

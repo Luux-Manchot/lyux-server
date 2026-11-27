@@ -33,5 +33,17 @@ def test_apps_catalog_role_authorization_and_persistence(tmp_path, monkeypatch):
 
     prof_res = client.get("/api/v1/apps/client", params={"role": "prof"})
     assert prof_res.status_code == 200
-    prof_app = next(a for a in prof_res.json()["apps"] if a["id"] == "ghidra-lab")
+    prof_data = prof_res.json()
+    assert prof_data["fallback_direct"] is True
+    assert isinstance(prof_data["peer_caches"], list)
+    prof_app = next(a for a in prof_data["apps"] if a["id"] == "ghidra-lab")
     assert prof_app["authorized"] is True
+
+
+def test_apps_store_search_endpoint():
+    client = TestClient(server_main.app)
+    res = client.get("/api/v1/apps/store/search", params={"q": "inkscape", "source": "all"})
+    assert res.status_code == 200
+    data = res.json()
+    assert "items" in data
+    assert len(data["items"]) >= 1

@@ -66,6 +66,9 @@ export default function Logiciels({ notify }) {
       allowed_roles: values.allowedRoles || ['eleve', 'prof', 'admin'],
       allowed_groups: values.allowedRoles || ['eleve', 'prof', 'admin'],
       source: values.source || 'Dépôt LyuX',
+      format: values.format || 'Paquet .deb',
+      description: values.description || '',
+      icon: values.icon || '📦',
       link: values.link || '',
       launch_args: values.launchArgs || '',
     }
@@ -112,6 +115,12 @@ export default function Logiciels({ notify }) {
         categories={categories}
         rows={filteredApps}
         focusId={focusId}
+        onUpdated={(updated) =>
+          setCatalog((current) => current.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)))
+        }
+        onDeleted={(deletedId) =>
+          setCatalog((current) => current.filter((item) => item.id !== deletedId))
+        }
       />
 
       <SoftwareModal

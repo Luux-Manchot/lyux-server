@@ -119,11 +119,20 @@ export const api = {
 
   // Logiciels
   getApps: () => apiRequest('/api/v1/apps'),
+  searchAppStore: (query = '', source = 'all') =>
+    apiRequest(`/api/v1/apps/store/search?q=${encodeURIComponent(query)}&source=${encodeURIComponent(source)}`),
   addApp: (payload) =>
     apiRequest('/api/v1/apps', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  updateApp: (appId, payload) =>
+    apiRequest(`/api/v1/apps/${encodeURIComponent(appId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  deleteApp: (appId) =>
+    apiRequest(`/api/v1/apps/${encodeURIComponent(appId)}`, { method: 'DELETE' }),
   deployApps: () => apiRequest('/api/v1/apps/deploy', { method: 'POST' }),
 
   // Utilisateurs & Classes
